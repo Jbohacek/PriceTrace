@@ -8,6 +8,10 @@ var database = postgres.AddDatabase("pricetrace");
 var rabbitmq = builder.AddRabbitMQ("rabbitmq")
     .WithManagementPlugin();
 
+var scraperService = builder.AddProject<Projects.PriceTrace_ScraperService>("scraperservice")
+    .WithReference(rabbitmq)
+    .WaitFor(rabbitmq);
+
 var apiService = builder.AddProject<Projects.PriceTrace_ApiService>("apiservice")
     .WithHttpHealthCheck("/health")
     .WithReference(database)

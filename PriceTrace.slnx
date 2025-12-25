@@ -1,6 +1,7 @@
 <Solution>
   <Project Path="PriceTrace.ApiService/PriceTrace.ApiService.csproj" />
   <Project Path="PriceTrace.AppHost/PriceTrace.AppHost.csproj" />
+  <Project Path="PriceTrace.ScraperService/PriceTrace.ScraperService.csproj" />
   <Project Path="PriceTrace.ServiceDefaults/PriceTrace.ServiceDefaults.csproj" />
   <Project Path="PriceTrace.Tests/PriceTrace.Tests.csproj" />
   <Project Path="PriceTrace.Web/PriceTrace.Web.csproj" />

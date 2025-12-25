@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PriceTrace.ApiService\PriceTrace.ApiService.csproj" />
+    <ProjectReference Include="..\PriceTrace.ScraperService\PriceTrace.ScraperService.csproj" />
     <ProjectReference Include="..\PriceTrace.Web\PriceTrace.Web.csproj" />
   </ItemGroup>
 
