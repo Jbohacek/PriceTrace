@@ -1,4 +1,13 @@
 <Solution>
+  <Folder Name="/Core/">
+    <Project Path="PriceTrace.Clients/PriceTrace.Clients.csproj" />
+    <Project Path="PriceTrace.Common/PriceTrace.Common.csproj" />
+    <Project Path="PriceTrace.Contracts/PriceTrace.Contracts.csproj" />
+    <Project Path="PriceTrace.DataEf/PriceTrace.DataEf.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
   <Project Path="PriceTrace.ApiService/PriceTrace.ApiService.csproj" />
   <Project Path="PriceTrace.AppHost/PriceTrace.AppHost.csproj" />
   <Project Path="PriceTrace.ScraperService/PriceTrace.ScraperService.csproj" />
