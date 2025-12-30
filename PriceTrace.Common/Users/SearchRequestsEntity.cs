@@ -1,8 +1,10 @@
 ﻿using PriceTrace.Common.Core;
 using PriceTrace.Common.Products;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PriceTrace.Common.Users;
 
+[Table("tbSearchRequest", Schema = "User")]
 public class SearchRequestsEntity : BaseEntity
 {
 

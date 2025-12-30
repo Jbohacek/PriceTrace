@@ -1,8 +1,10 @@
 ﻿using PriceTrace.Common.Core;
 using PriceTrace.Common.Users;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PriceTrace.Common.Products;
 
+[Table("tbProduct", Schema = "Products")]
 public class ProductEntity : BaseEntity
 {
     public string[] Names { get; set; } = Array.Empty<string>();

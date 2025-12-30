@@ -1,8 +1,10 @@
 ﻿using PriceTrace.Common.Core;
 using PriceTrace.Common.Enums;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PriceTrace.Common.Products;
 
+[Table("tbListing", Schema = "Products")]
 public class ListingEntity : BaseEntity
 {
     public required ProductEntity Product { get; set; }
