@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/Core/">
+    <Project Path="PriceTrace.Application/PriceTrace.Application.csproj" />
     <Project Path="PriceTrace.Clients/PriceTrace.Clients.csproj" />
     <Project Path="PriceTrace.Common/PriceTrace.Common.csproj" />
     <Project Path="PriceTrace.Contracts/PriceTrace.Contracts.csproj" />
