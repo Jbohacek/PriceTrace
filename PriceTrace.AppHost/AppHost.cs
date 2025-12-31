@@ -1,9 +1,22 @@
+using Projects;
+
 var builder = DistributedApplication.CreateBuilder(args);
 
-var postgres = builder.AddPostgres("postgres")
+// Použij Parameter pro heslo - správný Aspire zpùsob
+var postgresPassword = builder.AddParameter("postgres-password", secret: true);
+
+var postgres = builder.AddPostgres("postgres", password: postgresPassword)
+    .WithHostPort(5432)
     .WithPgAdmin();
 
-var database = postgres.AddDatabase("pricetrace");
+var databaseName = "pricetrace";
+var creationScript = $$"""
+                       -- Create the database
+                       CREATE DATABASE {{databaseName}};
+
+                       """;
+
+var database = postgres.AddDatabase("pricetrace").WithCreationScript(creationScript);
 
 var rabbitmq = builder.AddRabbitMQ("rabbitmq")
     .WithManagementPlugin();
@@ -12,11 +25,11 @@ var scraperService = builder.AddProject<Projects.PriceTrace_ScraperService>("scr
     .WithReference(rabbitmq)
     .WaitFor(rabbitmq);
 
-var apiService = builder.AddProject<Projects.PriceTrace_ApiService>("apiservice")
+var apiService = builder.AddProject<PriceTrace_ApiService>("apiservice")
     .WithHttpHealthCheck("/health")
+    .WaitFor(postgres)
     .WithReference(database)
     .WithReference(rabbitmq)
-    .WaitFor(postgres)
     .WaitFor(rabbitmq);
 
 builder.AddProject<Projects.PriceTrace_Web>("webfrontend")

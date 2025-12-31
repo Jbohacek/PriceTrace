@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\PriceTrace.Clients\PriceTrace.Clients.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -8,6 +8,7 @@
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
+    <File Path="Command.txt" />
     <File Path="Directory.Packages.props" />
   </Folder>
   <Project Path="PriceTrace.ApiService/PriceTrace.ApiService.csproj" />

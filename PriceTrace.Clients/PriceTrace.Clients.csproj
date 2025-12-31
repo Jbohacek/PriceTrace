@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\PriceTrace.Contracts\PriceTrace.Contracts.csproj" />
+    <ProjectReference Include="..\PriceTrace.DataEf\PriceTrace.DataEf.csproj" />
+  </ItemGroup>
+
 </Project>

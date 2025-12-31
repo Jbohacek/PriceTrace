@@ -1,9 +1,11 @@
 ﻿using PriceTrace.Common.Core;
 using PriceTrace.Common.Enums;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PriceTrace.Common.LogsEntities;
 
-public class BaseLog : BaseEntity
+[Table("tbLogs",Schema = "Logging")]
+public class LogEntity : BaseEntity
 {
     public LogLevelEnum Level { get; set; }
 
