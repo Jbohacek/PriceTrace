@@ -1,6 +1,148 @@
 @ApiService_HostAddress = http://localhost:5492
 
+### Weather Forecast
 GET {{ApiService_HostAddress}}/weatherforecast/
 Accept: application/json
+
+###
+
+### ==================== USERS ====================
+
+# Get all users
+GET {{ApiService_HostAddress}}/api/users
+Accept: application/json
+
+###
+
+# Get user by ID
+GET {{ApiService_HostAddress}}/api/users/00000000-0000-0000-0000-000000000000
+Accept: application/json
+
+###
+
+# Create user
+POST {{ApiService_HostAddress}}/api/users
+Content-Type: application/json
+
+{
+    "username": "TestUser1"
+}
+
+###
+
+# Update user
+PUT {{ApiService_HostAddress}}/api/users/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+    "username": "UpdatedUser"
+}
+
+###
+
+# Delete user
+DELETE {{ApiService_HostAddress}}/api/users/00000000-0000-0000-0000-000000000000
+
+###
+
+### ==================== PRODUCTS ====================
+
+# Get all products
+GET {{ApiService_HostAddress}}/api/products
+Accept: application/json
+
+###
+
+# Get product by ID
+GET {{ApiService_HostAddress}}/api/products/00000000-0000-0000-0000-000000000000
+Accept: application/json
+
+###
+
+# Create product
+POST {{ApiService_HostAddress}}/api/products
+Content-Type: application/json
+
+{
+    "productName": "Steam Deck",
+    "productDescription": "Handheld gaming PC",
+    "names": ["Steam Deck", "SteamDeck"],
+    "imageUrl": null
+}
+
+###
+
+# Update product
+PUT {{ApiService_HostAddress}}/api/products/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+    "productName": "Steam Deck OLED",
+    "productDescription": "Handheld gaming PC with OLED display",
+    "names": ["Steam Deck OLED", "SteamDeck OLED"],
+    "imageUrl": null
+}
+
+###
+
+# Delete product
+DELETE {{ApiService_HostAddress}}/api/products/00000000-0000-0000-0000-000000000000
+
+###
+
+### ==================== SEARCH REQUESTS ====================
+
+# Get all search requests
+GET {{ApiService_HostAddress}}/api/searchrequests
+Accept: application/json
+
+###
+
+# Get search request by ID
+GET {{ApiService_HostAddress}}/api/searchrequests/00000000-0000-0000-0000-000000000000
+Accept: application/json
+
+###
+
+# Get search requests by user ID
+GET {{ApiService_HostAddress}}/api/searchrequests/by-user/00000000-0000-0000-0000-000000000000
+Accept: application/json
+
+###
+
+# Create search request
+POST {{ApiService_HostAddress}}/api/searchrequests
+Content-Type: application/json
+
+{
+    "userId": "00000000-0000-0000-0000-000000000000",
+    "productId": "00000000-0000-0000-0000-000000000000",
+    "fleaMarketWeb": 1,
+    "softUpLimit": null,
+    "softDownLimit": null,
+    "hardUpLimit": 15000,
+    "hardDownLimit": 5000,
+    "intervalInSeconds": 300
+}
+
+###
+
+# Update search request
+PUT {{ApiService_HostAddress}}/api/searchrequests/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+    "fleaMarketWeb": 1,
+    "softUpLimit": null,
+    "softDownLimit": null,
+    "hardUpLimit": 20000,
+    "hardDownLimit": 3000,
+    "intervalInSeconds": 600
+}
+
+###
+
+# Delete search request
+DELETE {{ApiService_HostAddress}}/api/searchrequests/00000000-0000-0000-0000-000000000000
 
 ###
