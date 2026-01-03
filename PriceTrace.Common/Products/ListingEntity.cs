@@ -9,8 +9,6 @@ public class ListingEntity : BaseEntity
 {
     public required ProductEntity Product { get; set; }
 
-    public required FleaMarketWebEnum FleaMarketWebEnum { get; set; }
-
     public required string Url { get; set; }
 
     /// <summary>

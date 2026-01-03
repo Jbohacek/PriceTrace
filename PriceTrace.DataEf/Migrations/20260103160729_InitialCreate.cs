@@ -102,7 +102,6 @@ namespace PriceTrace.DataEf.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     ProductId = table.Column<Guid>(type: "uuid", nullable: false),
-                    FleaMarketWebEnum = table.Column<int>(type: "integer", nullable: false),
                     Url = table.Column<string>(type: "text", nullable: false),
                     Price = table.Column<decimal>(type: "numeric", nullable: false),
                     Title = table.Column<string>(type: "text", nullable: false),
@@ -137,6 +136,7 @@ namespace PriceTrace.DataEf.Migrations
                     HardUpLimit = table.Column<int>(type: "integer", nullable: true),
                     HardDownLimit = table.Column<int>(type: "integer", nullable: true),
                     IntervalInSeconds = table.Column<long>(type: "bigint", nullable: false),
+                    FleaMarketWebEnum = table.Column<int>(type: "integer", nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     ProductId = table.Column<Guid>(type: "uuid", nullable: false),
                     CreatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),

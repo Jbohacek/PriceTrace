@@ -1,4 +1,5 @@
 ﻿using PriceTrace.Common.Core;
+using PriceTrace.Common.Enums;
 using PriceTrace.Common.Products;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -15,6 +16,8 @@ public class SearchRequestsEntity : BaseEntity
     public int? HardDownLimit { get; set; }
 
     public long IntervalInSeconds { get; set; } = 300;
+
+    public required FleaMarketWebEnum FleaMarketWebEnum { get; set; }
 
     public required UserEntity User { get; set; }
     public required ProductEntity Product { get; set; }

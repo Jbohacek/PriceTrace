@@ -12,7 +12,7 @@ using PriceTrace.DataEf;
 namespace PriceTrace.DataEf.Migrations
 {
     [DbContext(typeof(PriceTraceDbContext))]
-    [Migration("20251230231049_InitialCreate")]
+    [Migration("20260103160729_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -101,9 +101,6 @@ namespace PriceTrace.DataEf.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
-                    b.Property<int>("FleaMarketWebEnum")
-                        .HasColumnType("integer");
-
                     b.Property<string>("Location")
                         .HasColumnType("text");
 
@@ -177,6 +174,9 @@ namespace PriceTrace.DataEf.Migrations
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("FleaMarketWebEnum")
+                        .HasColumnType("integer");
 
                     b.Property<int?>("HardDownLimit")
                         .HasColumnType("integer");
