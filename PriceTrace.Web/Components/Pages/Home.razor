@@ -1,7 +1,130 @@
 ﻿@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Smart Bazaar Advisor - Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="container py-5">
+    <section class="text-center mb-5">
+        <h1 class="display-4 fw-bold mb-3">Smart Bazaar Advisor</h1>
+        <p class="lead text-muted">
+            Your intelligent companion for navigating the second-hand market.
+            Think of it as a "digital antique expert" that guides you through every deal,
+            ensuring you never overpay again.
+        </p>
+        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+            <a href="/searchrequests" class="btn btn-primary btn-lg px-4 gap-3">Start Searching</a>
+            <a href="/products" class="btn btn-outline-secondary btn-lg px-4">View Products</a>
+        </div>
+    </section>
 
-Welcome to your new app.
+    <div class="row g-4 py-5">
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="mb-3 text-primary"><i class="bi bi-search fs-1"></i></div>
+                    <h3 class="h5">Advanced Search</h3>
+                    <p class="card-text text-secondary">
+                        Search across multiple bazaar platforms simultaneously.
+                        Define soft limits for your budget and hard limits to filter out scams or unrealistic pricing.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="mb-3 text-success"><i class="bi bi-graph-up-arrow fs-1"></i></div>
+                    <h3 class="h5">Price Tracking</h3>
+                    <p class="card-text text-secondary">
+                        Monitor price evolution in real-time.
+                        We track historical data to show you if a price is truly a "hot deal" or just a marketing trick.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="mb-3 text-warning"><i class="bi bi-cpu fs-1"></i></div>
+                    <h3 class="h5">AI-Powered Insights</h3>
+                    <p class="card-text text-secondary">
+                        Using simple ML and pgvector, the system identifies identical products even with different descriptions
+                        and predicts future resale value.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <section class="my-5 p-5 bg-light rounded-3">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h2 class="fw-bold">Explainable Intelligence</h2>
+                <p>We don't just give you a number; we provide <strong>transparency</strong>. Our metrics include:</p>
+                <ul class="list-unstyled">
+                    <li><i class="bi bi-check2-circle text-primary me-2"></i><strong>Value for Money:</strong> Combining condition, age, and market average.</li>
+                    <li><i class="bi bi-check2-circle text-primary me-2"></i><strong>Market Saturation:</strong> Knowing current supply to give you bargaining power.</li>
+                    <li><i class="bi bi-check2-circle text-primary me-2"></i><strong>Bazaar vs. E-shop:</strong> Comparing used prices against brand-new alternatives.</li>
+                </ul>
+            </div>
+            <div class="col-lg-6 text-center">
+                <div class="p-4 border bg-white shadow-sm rounded">
+                    <h4 class="text-muted">Example Metric</h4>
+                    <div class="display-6 text-primary fw-bold">85/100</div>
+                    <p class="mb-0 mt-2">"Great deal! 20% cheaper than the monthly average."</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-5">
+        <h2 class="text-center mb-4">Under the Hood</h2>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Layer</th>
+                        <th>Technology</th>
+                        <th>Purpose</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Frontend</strong></td>
+                        <td>Blazor Server</td>
+                        <td>Interactive web UI with real-time updates.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Orchestration</strong></td>
+                        <td>.NET Aspire</td>
+                        <td>Managing the distributed application stack with service discovery.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>API Layer</strong></td>
+                        <td>ASP.NET Core Web API</td>
+                        <td>RESTful API with health checks and service endpoints.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Data Gathering</strong></td>
+                        <td>Playwright & RabbitMQ</td>
+                        <td>Headless browser scraping with message queuing for scalability.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Background Processing</strong></td>
+                        <td>.NET Worker Service</td>
+                        <td>Continuous scraping tasks and command processing via MassTransit.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Storage</strong></td>
+                        <td>PostgreSQL</td>
+                        <td>Relational data storage with Entity Framework Core.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Admin Tools</strong></td>
+                        <td>pgAdmin & RabbitMQ Management</td>
+                        <td>Database and message queue monitoring interfaces.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
