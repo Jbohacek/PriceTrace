@@ -1,4 +1,6 @@
+using MassTransit;
 using PriceTrace.ApiService.Mappings;
+using PriceTrace.ApiService.Services;
 using PriceTrace.DataEf.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +13,34 @@ builder.AddPriceTraceDataEf();
 
 // Add AutoMapper
 builder.Services.AddAutoMapper(typeof(UserMappingProfile).Assembly);
+
+// Configure MassTransit with RabbitMQ
+builder.Services.AddMassTransit(x =>
+{
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        // Get RabbitMQ connection from Aspire configuration
+        var rabbitMqConnectionString = builder.Configuration.GetConnectionString("rabbitmq");
+        
+        if (!string.IsNullOrEmpty(rabbitMqConnectionString))
+        {
+            cfg.Host(new Uri(rabbitMqConnectionString));
+        }
+        else
+        {
+            cfg.Host("localhost", "/", h =>
+            {
+                h.Username("guest");
+                h.Password("guest");
+            });
+        }
+
+        cfg.ConfigureEndpoints(context);
+    });
+});
+
+// Register ScraperCommandService
+builder.Services.AddScoped<IScraperCommandService, ScraperCommandService>();
 
 // Add controllers
 builder.Services.AddControllers();
