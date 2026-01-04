@@ -10,7 +10,7 @@ namespace PriceTrace.Application.Scrapers;
 public class BazosScraper : BaseScraper
 {
     public override string BaseSearchUrl { get; set; } =
-        "https://www.bazos.cz/search.php?hledat={0}&rubriky=www&hlokalita=&humkreis=&cenaod={1}&cenado={2}&Submit=Hledat&order=&kitx=ano";
+        "https://www.bazos.cz/search.php?hledat={0}&rubriky=www&hlokalita=&humkreis=&cenaod={2}&cenado={1}&Submit=Hledat&order=&kitx=ano";
 
     public override async Task<IScaperModelResult> GetSearchResult(IPage page, SearchRequestsEntity searchRequestsEntity)
     {
@@ -29,9 +29,11 @@ public class BazosScraper : BaseScraper
     private async Task<ICollection<ListingEntity>> ProcessOnePage(IPage page, string url, ProductEntity product)
     {
         var allResults = new List<ListingEntity>();
-        Console.WriteLine($"Naviguji na počáteční URL: {url}");
+        Console.WriteLine($"Navigating to initial URL: {url}");
 
         await page.GotoAsync(url);
+
+        await DismissCookieConsentAsync(page);
         bool hasNextPage = true;
 
         while (hasNextPage)
@@ -41,7 +43,7 @@ public class BazosScraper : BaseScraper
             var listingLocators = page.Locator(".inzeraty.inzeratyflex");
             var count = await listingLocators.CountAsync();
 
-            Console.WriteLine($"Načítám {count} inzerátů z aktuální stránky...");
+            Console.WriteLine($"Loading {count} listings from current page...");
 
             for (int i = 0; i < count; i++)
             {
@@ -84,7 +86,7 @@ public class BazosScraper : BaseScraper
 
             if (await nextButton.CountAsync() > 0)
             {
-                Console.WriteLine("Přecházím na další stránku...");
+                Console.WriteLine("Moving to next page...");
 
                 // Klikneme a počkáme na načtení sítě
                 await nextButton.First.ClickAsync();
@@ -95,11 +97,30 @@ public class BazosScraper : BaseScraper
             }
             else
             {
-                Console.WriteLine("Dosažena poslední stránka.");
+                Console.WriteLine("Reached last page.");
                 hasNextPage = false;
             }
         }
 
         return allResults;
+    }
+
+    private async Task DismissCookieConsentAsync(IPage page)
+    {
+        try
+        {
+            var cookieDialog = page.Locator("#termsfeed-com---nb");
+            if (await cookieDialog.IsVisibleAsync())
+            {
+                var acceptButton = cookieDialog.Locator("button, a").First;
+                await acceptButton.ClickAsync(new LocatorClickOptions { Timeout = 5000 });
+                await Task.Delay(500);
+                Console.WriteLine("Cookie consent dialog was closed.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to close cookie dialog (may already be closed): {ex.Message}");
+        }
     }
 }

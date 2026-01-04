@@ -23,7 +23,9 @@ var rabbitmq = builder.AddRabbitMQ("rabbitmq")
 
 var scraperService = builder.AddProject<Projects.PriceTrace_ScraperService>("scraperservice")
     .WithReference(rabbitmq)
-    .WaitFor(rabbitmq);
+    .WaitFor(rabbitmq)
+    .WaitFor(postgres)
+    .WithReference(database);
 
 var apiService = builder.AddProject<PriceTrace_ApiService>("apiservice")
     .WithHttpHealthCheck("/health")
@@ -36,6 +38,7 @@ builder.AddProject<Projects.PriceTrace_Web>("webfrontend")
     .WithExternalHttpEndpoints()
     .WithHttpHealthCheck("/health")
     .WithReference(apiService)
-    .WaitFor(apiService);
+    .WaitFor(apiService)
+    .WaitFor(scraperService);
 
 builder.Build().Run();

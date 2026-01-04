@@ -20,16 +20,15 @@ public abstract class BaseScraper
     /// <returns></returns>
     public string[] PopulateUrl(SearchRequestsEntity searchRequestsEntity)
     {
-        string[] resultStrings = new string[searchRequestsEntity.Product.Names.Count()];
-
-        for (int i = 0; i < resultStrings.Length; i++)
+        return searchRequestsEntity.Product.Names.Select(name =>
         {
-            resultStrings[i] = BaseSearchUrl;
-            resultStrings[i] = resultStrings[i].Replace("{0}", searchRequestsEntity.Product.Names[i]);
-            resultStrings[i] = resultStrings[i].Replace("{1}", searchRequestsEntity.HardUpLimit.ToString());
-            resultStrings[i] = resultStrings[i].Replace("{2}", searchRequestsEntity.HardDownLimit.ToString());
-        }
+            string url = BaseSearchUrl;
 
-        return resultStrings;
+            url = url.Replace("{0}", Uri.EscapeDataString(name ?? ""));
+            url = url.Replace("{1}", Uri.EscapeDataString(searchRequestsEntity.HardUpLimit.ToString()));
+            url = url.Replace("{2}", Uri.EscapeDataString(searchRequestsEntity.HardDownLimit.ToString()));
+
+            return url;
+        }).ToArray();
     }
 }

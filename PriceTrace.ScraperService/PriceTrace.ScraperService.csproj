@@ -17,5 +17,10 @@
   <ItemGroup>
     <ProjectReference Include="..\PriceTrace.Application\PriceTrace.Application.csproj" />
     <ProjectReference Include="..\PriceTrace.Contracts\PriceTrace.Contracts.csproj" />
+    <ProjectReference Include="..\PriceTrace.DataEf\PriceTrace.DataEf.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Models\" />
   </ItemGroup>
 </Project>

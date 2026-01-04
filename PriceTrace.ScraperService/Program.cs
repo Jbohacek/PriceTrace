@@ -1,8 +1,21 @@
 using PriceTrace.ScraperService;
 using PriceTrace.ScraperService.Consumers;
+using PriceTrace.Application.Services;
+using PriceTrace.DataEf.Extensions;
 using MassTransit;
 
 var builder = Host.CreateApplicationBuilder(args);
+
+// Add PriceTrace database with UnitOfWork + Repository pattern
+builder.AddPriceTraceDataEf();
+
+// Register PlaywrightService as singleton
+builder.Services.AddSingleton<IPlaywrightService, PlaywrightService>();
+
+// Register ScrapingService as singleton to maintain state
+builder.Services.AddSingleton<IScrapingService, ScrapingService>();
+
+// Add Worker service
 builder.Services.AddHostedService<Worker>();
 
 // Configure MassTransit with RabbitMQ
@@ -35,4 +48,9 @@ builder.Services.AddMassTransit(x =>
 });
 
 var host = builder.Build();
+
+// Initialize PlaywrightService on startup
+var playwrightService = host.Services.GetRequiredService<IPlaywrightService>();
+await playwrightService.InitializeAsync();
+
 host.Run();
