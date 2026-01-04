@@ -34,6 +34,11 @@ builder.Services.AddHttpClient<UserApiClient>(client =>
         client.BaseAddress = new("https+http://apiservice");
     });
 
+builder.Services.AddHttpClient<ListingApiClient>(client =>
+    {
+        client.BaseAddress = new("https+http://apiservice");
+    });
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())

@@ -1,0 +1,452 @@
+@page "/products/{productId:guid}"
+@using PriceTrace.ApiService.Models
+@using System.Text.Json
+@inject ProductApiClient ProductClient
+@inject ListingApiClient ListingClient
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
+@implements IAsyncDisposable
+
+<PageTitle>Product Detail</PageTitle>
+
+@if (isLoading)
+{
+    <div class="container mt-5">
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Loading product details...</p>
+        </div>
+    </div>
+}
+else if (product == null)
+{
+    <div class="container mt-5">
+        <div class="alert alert-danger">
+            <h4>Product Not Found</h4>
+            <p>The requested product could not be found.</p>
+            <button class="btn btn-primary" @onclick="NavigateToProducts">
+                Back to Products
+            </button>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid mt-3">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/products">Products</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">@product.ProductName</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Product Info -->
+        <div class="row mb-4">
+            <div class="col-md-2">
+                @if (!string.IsNullOrEmpty(product.ImageUrl))
+                {
+                    <img src="@product.ImageUrl" alt="@product.ProductName" class="img-fluid rounded" />
+                }
+                else
+                {
+                    <div class="bg-secondary text-white d-flex align-items-center justify-content-center rounded" style="height: 150px;">
+                        <span class="bi bi-image" style="font-size: 3rem;"></span>
+                    </div>
+                }
+            </div>
+            <div class="col-md-10">
+                <h1>@product.ProductName</h1>
+                <p class="text-muted">@product.ProductDescription</p>
+                @if (product.Names.Length > 0)
+                {
+                    <div class="mb-2">
+                        <strong>Alternative Names:</strong>
+                        @foreach (var name in product.Names)
+                        {
+                            <span class="badge bg-secondary me-1">@name</span>
+                        }
+                    </div>
+                }
+                <p class="text-muted">
+                    <small>Created: @product.CreatedDate.ToString("g")</small>
+                    @if (product.UpdatedDate.HasValue)
+                    {
+                        <span> | Updated: @product.UpdatedDate.Value.ToString("g")</span>
+                    }
+                </p>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Total Listings</h5>
+                        <h2 class="text-primary">@listings.Count</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Average Price</h5>
+                        <h2 class="text-success">@GetAveragePrice() Kè</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Median Price</h5>
+                        <h2 class="text-info">@GetMedianPrice() Kè</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title">Price Range</h5>
+                        <h2 class="text-warning">@GetMinPrice() - @GetMaxPrice() Kè</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Price Chart -->
+        @if (listings.Count > 0)
+        {
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Price Distribution</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="priceChart" style="height: 300px;">
+                                <canvas id="priceChartCanvas"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Price Timeline</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="timelineChart" style="height: 300px;">
+                                <canvas id="timelineChartCanvas"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Listings Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">All Listings</h5>
+                        <div>
+                            <select class="form-select form-select-sm d-inline-block w-auto" @bind="sortBy" @bind:after="ApplySort">
+                                <option value="retrievedat-desc">Newest First</option>
+                                <option value="retrievedat-asc">Oldest First</option>
+                                <option value="price-asc">Price: Low to High</option>
+                                <option value="price-desc">Price: High to Low</option>
+                                <option value="title-asc">Title: A-Z</option>
+                                <option value="title-desc">Title: Z-A</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        @if (listings.Count == 0)
+                        {
+                            <div class="alert alert-info">No listings found for this product.</div>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Title</th>
+                                            <th>Price</th>
+                                            <th>Location</th>
+                                            <th>Creator</th>
+                                            <th>Views</th>
+                                            <th>Retrieved At</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var listing in GetSortedListings())
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <strong>@listing.Title</strong>
+                                                    @if (!string.IsNullOrEmpty(listing.Description))
+                                                    {
+                                                        <br />
+                                                        <small class="text-muted">@GetTruncatedDescription(listing.Description)</small>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <span class="badge @GetPriceBadgeClass(listing.Price)">
+                                                        @FormatPrice(listing.Price)
+                                                    </span>
+                                                </td>
+                                                <td>@(listing.Location ?? "N/A")</td>
+                                                <td>@(listing.CreatorName ?? "N/A")</td>
+                                                <td>
+                                                    @if (listing.ViewCount.HasValue)
+                                                    {
+                                                        <span class="bi bi-eye"></span>
+                                                        <text> @listing.ViewCount.Value</text>
+                                                    }
+                                                    else
+                                                    {
+                                                        <text>N/A</text>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <small>@listing.RetrievedAt.ToString("g")</small>
+                                                </td>
+                                                <td>
+                                                    <a href="@listing.Url" target="_blank" class="btn btn-sm btn-primary">
+                                                        <span class="bi bi-box-arrow-up-right"></span> View
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+        <div class="toast show" role="alert">
+            <div class="toast-header bg-danger text-white">
+                <strong class="me-auto">Error</strong>
+                <button type="button" class="btn-close btn-close-white" @onclick="() => errorMessage = null"></button>
+            </div>
+            <div class="toast-body">
+                @errorMessage
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public Guid ProductId { get; set; }
+
+    private ProductResponse? product;
+    private List<ListingResponse> listings = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+    private string sortBy = "retrievedat-desc";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            product = await ProductClient.GetProductByIdAsync(ProductId);
+
+            if (product != null)
+            {
+                var filterRequest = new ListingFilterRequest(
+                    ProductId: ProductId,
+                    PageSize: 1000
+                );
+                
+                var result = await ListingClient.FilterListingsAsync(filterRequest);
+                listings = result?.Items.ToList() ?? new();
+
+                await RenderCharts();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load product details: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ApplySort()
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private IEnumerable<ListingResponse> GetSortedListings()
+    {
+        var sortedListings = listings.AsEnumerable();
+
+        return sortBy switch
+        {
+            "price-asc" => sortedListings.OrderBy(l => l.Price),
+            "price-desc" => sortedListings.OrderByDescending(l => l.Price),
+            "title-asc" => sortedListings.OrderBy(l => l.Title),
+            "title-desc" => sortedListings.OrderByDescending(l => l.Title),
+            "retrievedat-asc" => sortedListings.OrderBy(l => l.RetrievedAt),
+            "retrievedat-desc" => sortedListings.OrderByDescending(l => l.RetrievedAt),
+            _ => sortedListings.OrderByDescending(l => l.RetrievedAt)
+        };
+    }
+
+    private string GetAveragePrice()
+    {
+        if (listings.Count == 0) return "N/A";
+        var validPrices = listings.Where(l => l.Price > 0).Select(l => l.Price).ToList();
+        if (validPrices.Count == 0) return "N/A";
+        return Math.Round(validPrices.Average(), 2).ToString("N2");
+    }
+
+    private string GetMedianPrice()
+    {
+        if (listings.Count == 0) return "N/A";
+        var validPrices = listings.Where(l => l.Price > 0).Select(l => l.Price).OrderBy(p => p).ToList();
+        if (validPrices.Count == 0) return "N/A";
+
+        int count = validPrices.Count;
+        if (count % 2 == 0)
+        {
+            return Math.Round((validPrices[count / 2 - 1] + validPrices[count / 2]) / 2, 2).ToString("N2");
+        }
+        else
+        {
+            return Math.Round(validPrices[count / 2], 2).ToString("N2");
+        }
+    }
+
+    private string GetMinPrice()
+    {
+        if (listings.Count == 0) return "N/A";
+        var validPrices = listings.Where(l => l.Price > 0).Select(l => l.Price).ToList();
+        if (validPrices.Count == 0) return "N/A";
+        return Math.Round(validPrices.Min(), 2).ToString("N2");
+    }
+
+    private string GetMaxPrice()
+    {
+        if (listings.Count == 0) return "N/A";
+        var validPrices = listings.Where(l => l.Price > 0).Select(l => l.Price).ToList();
+        if (validPrices.Count == 0) return "N/A";
+        return Math.Round(validPrices.Max(), 2).ToString("N2");
+    }
+
+    private string GetPriceBadgeClass(decimal price)
+    {
+        if (price == 0) return "bg-success";
+        if (price == -1) return "bg-info";
+        
+        var validPrices = listings.Where(l => l.Price > 0).Select(l => l.Price).ToList();
+        if (validPrices.Count == 0) return "bg-secondary";
+
+        var average = validPrices.Average();
+        if (price < average * 0.8m) return "bg-success";
+        if (price > average * 1.2m) return "bg-danger";
+        return "bg-warning";
+    }
+
+    private string FormatPrice(decimal price)
+    {
+        if (price == 0) return "Zdarma";
+        if (price == -1) return "Dohodou";
+        return $"{price:N0} Kè";
+    }
+
+    private string GetTruncatedDescription(string description, int maxLength = 100)
+    {
+        if (string.IsNullOrEmpty(description)) return string.Empty;
+        if (description.Length <= maxLength) return description;
+        return description.Substring(0, maxLength) + "...";
+    }
+
+    private void NavigateToProducts()
+    {
+        Navigation.NavigateTo("/products");
+    }
+
+    private async Task RenderCharts()
+    {
+        try
+        {
+            if (listings.Count > 0)
+            {
+                // Add a small delay to ensure DOM is ready
+                await Task.Delay(100);
+                
+                var listingsData = listings.Select(l => new
+                {
+                    price = l.Price,
+                    retrievedAt = l.RetrievedAt.ToString("o"),
+                    title = l.Title
+                }).ToList();
+
+                var listingsJson = JsonSerializer.Serialize(listingsData);
+                var listingsArray = JsonSerializer.Deserialize<object[]>(listingsJson);
+
+                if (listingsArray != null)
+                {
+                    await JSRuntime.InvokeVoidAsync("productDetailCharts.initializePriceDistribution", (object)listingsArray);
+                    await JSRuntime.InvokeVoidAsync("productDetailCharts.initializeTimeline", (object)listingsArray);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Charts are optional, don't fail the page if they can't render
+            Console.WriteLine($"Failed to render charts: {ex.Message}");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("productDetailCharts.destroy");
+        }
+        catch
+        {
+            // Ignore disposal errors
+        }
+    }
+}

@@ -63,6 +63,9 @@
                             </td>
                             <td>@product.CreatedDate.ToString("g")</td>
                             <td>
+                                <a href="/products/@product.Id" class="btn btn-sm btn-info me-1">
+                                    <span class="bi bi-eye"></span>
+                                </a>
                                 <button class="btn btn-sm btn-primary me-1" @onclick="() => OpenEditDialog(product)">
                                     <span class="bi bi-pencil"></span>
                                 </button>
