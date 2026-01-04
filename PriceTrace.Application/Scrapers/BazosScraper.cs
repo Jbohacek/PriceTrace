@@ -23,7 +23,14 @@ public class BazosScraper : BaseScraper
             result.AddRange(await ProcessOnePage(page, t, searchRequestsEntity.Product));
         }
 
-        return new BazosScraperResult() {Result = result};
+        var distinctResults = result
+            .GroupBy(x => x.Url)
+            .Select(g => g.First())
+            .ToList();
+
+        Console.WriteLine($"Scrape succesful with {distinctResults.Count} results");
+
+        return new BazosScraperResult() { Result = distinctResults };
     }
 
     private async Task<ICollection<ListingEntity>> ProcessOnePage(IPage page, string url, ProductEntity product)

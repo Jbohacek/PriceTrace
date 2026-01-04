@@ -29,4 +29,9 @@ public class ListingEntity : BaseEntity
     public string? CreatorName { get; set; }
 
     public int? ViewCount { get; set; }
+
+    public override string ToString()
+    {
+        return $"{Title} - {Price} Kč ({Url})";
+    }
 }
