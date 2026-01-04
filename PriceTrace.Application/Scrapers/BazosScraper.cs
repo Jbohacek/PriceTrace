@@ -1,4 +1,5 @@
 ﻿using Microsoft.Playwright;
+using Microsoft.Extensions.Logging;
 using PriceTrace.Common.Products;
 using PriceTrace.Common.Users;
 using PriceTrace.Contracts.ScapeModelResults;
@@ -9,6 +10,17 @@ namespace PriceTrace.Application.Scrapers;
 
 public class BazosScraper : BaseScraper
 {
+    private readonly ILogger<BazosScraper>? _logger;
+
+    public BazosScraper()
+    {
+    }
+
+    public BazosScraper(ILogger<BazosScraper> logger)
+    {
+        _logger = logger;
+    }
+
     public override string BaseSearchUrl { get; set; } =
         "https://www.bazos.cz/search.php?hledat={0}&rubriky=www&hlokalita=&humkreis=&cenaod={2}&cenado={1}&Submit=Hledat&order=&kitx=ano";
 
@@ -28,7 +40,7 @@ public class BazosScraper : BaseScraper
             .Select(g => g.First())
             .ToList();
 
-        Console.WriteLine($"Scrape succesful with {distinctResults.Count} results");
+        _logger?.LogInformation("Scrape successful with {Count} results", distinctResults.Count);
 
         return new BazosScraperResult() { Result = distinctResults };
     }
@@ -36,7 +48,7 @@ public class BazosScraper : BaseScraper
     private async Task<ICollection<ListingEntity>> ProcessOnePage(IPage page, string url, ProductEntity product)
     {
         var allResults = new List<ListingEntity>();
-        Console.WriteLine($"Navigating to initial URL: {url}");
+        _logger?.LogInformation("Navigating to initial URL: {Url}", url);
 
         await page.GotoAsync(url);
 
@@ -50,7 +62,7 @@ public class BazosScraper : BaseScraper
             var listingLocators = page.Locator(".inzeraty.inzeratyflex");
             var count = await listingLocators.CountAsync();
 
-            Console.WriteLine($"Loading {count} listings from current page...");
+            _logger?.LogInformation("Loading {Count} listings from current page...", count);
 
             for (int i = 0; i < count; i++)
             {
@@ -93,7 +105,7 @@ public class BazosScraper : BaseScraper
 
             if (await nextButton.CountAsync() > 0)
             {
-                Console.WriteLine("Moving to next page...");
+                _logger?.LogInformation("Moving to next page...");
 
                 // Klikneme a počkáme na načtení sítě
                 await nextButton.First.ClickAsync();
@@ -104,7 +116,7 @@ public class BazosScraper : BaseScraper
             }
             else
             {
-                Console.WriteLine("Reached last page.");
+                _logger?.LogInformation("Reached last page.");
                 hasNextPage = false;
             }
         }
@@ -122,12 +134,12 @@ public class BazosScraper : BaseScraper
                 var acceptButton = cookieDialog.Locator("button, a").First;
                 await acceptButton.ClickAsync(new LocatorClickOptions { Timeout = 5000 });
                 await Task.Delay(500);
-                Console.WriteLine("Cookie consent dialog was closed.");
+                _logger?.LogInformation("Cookie consent dialog was closed.");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to close cookie dialog (may already be closed): {ex.Message}");
+            _logger?.LogWarning(ex, "Failed to close cookie dialog (may already be closed)");
         }
     }
 }

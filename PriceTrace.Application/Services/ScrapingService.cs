@@ -4,13 +4,16 @@ using PriceTrace.Common.Enums;
 using PriceTrace.Common.Products;
 using PriceTrace.Common.Users;
 using PriceTrace.Contracts.Tasks;
+using PriceTrace.DataEf.UnitOfWork;
 using System.Collections.Concurrent;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace PriceTrace.Application.Services;
 
 public class ScrapingService(
     ILogger<ScrapingService> logger,
-    IPlaywrightService playwrightService) : IScrapingService
+    IPlaywrightService playwrightService,
+    IServiceScopeFactory serviceScopeFactory) : IScrapingService
 {
     private readonly ConcurrentDictionary<Guid, ScrapingTask> _runningTasks = new();
 
@@ -101,7 +104,6 @@ public class ScrapingService(
                 logger.LogError(ex, "Error during scraping for SearchRequestId {SearchRequestId}", 
                     scrapingTask.SearchRequestId);
 
-                // Pokud dojde k chybì, poèkáme kratší dobu pøed dalším pokusem
                 try
                 {
                     await Task.Delay(TimeSpan.FromSeconds(60), cancellationToken);
@@ -116,19 +118,19 @@ public class ScrapingService(
 
     private async Task ExecuteSingleScrapingAsync(ScrapingTask scrapingTask)
     {
-        // Získání page z PlaywrightService (shared browser)
+        using var scope = serviceScopeFactory.CreateScope();
+        var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+        
         var page = await playwrightService.GetPageAsync();
 
         try
         {
-            // Vytvoøení scraperu podle typu tržištì
             BaseScraper scraper = scrapingTask.FleaMarketWeb switch
             {
                 (int)FleaMarketWebEnum.bazos => new BazosScraper(),
                 _ => throw new NotSupportedException($"FleaMarketWeb type {scrapingTask.FleaMarketWeb} is not supported")
             };
 
-            // Vytvoøení SearchRequestsEntity pro scraper
             var searchRequest = new SearchRequestsEntity
             {
                 Id = scrapingTask.SearchRequestId,
@@ -152,21 +154,68 @@ public class ScrapingService(
                 }
             };
 
-            // Spuštìní scrapingu
             var result = await scraper.GetSearchResult(page, searchRequest);
 
             logger.LogInformation("Scraping found {Count} listings for SearchRequestId {SearchRequestId}",
                 result.Result.Count, scrapingTask.SearchRequestId);
 
-            // Výpis výsledkù do konzole
+            var product = await unitOfWork.Products.GetByIdAsync(scrapingTask.ProductId);
+            if (product == null)
+            {
+                logger.LogWarning("Product with Id {ProductId} not found", scrapingTask.ProductId);
+                return;
+            }
+
+            int addedCount = 0;
+            int skippedCount = 0;
+
             foreach (var listing in result.Result)
             {
-                logger.LogInformation(
-                    "Listing: {Title} | Price: {Price} Kè | Location: {Location} | URL: {Url}",
-                    listing.Title,
-                    listing.Price,
-                    listing.Location,
-                    listing.Url);
+                var existingListing = await unitOfWork.Listings.FirstOrDefaultAsync(l => l.Url == listing.Url);
+                
+                if (existingListing == null)
+                {
+                    var newListing = new ListingEntity
+                    {
+                        Product = product,
+                        Url = listing.Url,
+                        Price = listing.Price,
+                        Title = listing.Title,
+                        Description = listing.Description,
+                        Location = listing.Location,
+                        CreatorName = listing.CreatorName,
+                        ViewCount = listing.ViewCount,
+                        RetrievedAt = DateTime.UtcNow
+                    };
+
+                    await unitOfWork.Listings.AddAsync(newListing);
+                    addedCount++;
+
+                    logger.LogInformation(
+                        "New Listing: {Title} | Price: {Price} Kè | Location: {Location} | URL: {Url}",
+                        listing.Title,
+                        listing.Price,
+                        listing.Location,
+                        listing.Url);
+                }
+                else
+                {
+                    skippedCount++;
+                    logger.LogDebug("Listing already exists: {Url}", listing.Url);
+                }
+            }
+
+            if (addedCount > 0)
+            {
+                await unitOfWork.SaveChangesAsync();
+                logger.LogInformation("Saved {AddedCount} new listings to database for SearchRequestId {SearchRequestId}", 
+                    addedCount, scrapingTask.SearchRequestId);
+            }
+
+            if (skippedCount > 0)
+            {
+                logger.LogInformation("Skipped {SkippedCount} duplicate listings for SearchRequestId {SearchRequestId}", 
+                    skippedCount, scrapingTask.SearchRequestId);
             }
         }
         catch (Exception ex)

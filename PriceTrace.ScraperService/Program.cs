@@ -12,7 +12,7 @@ builder.AddPriceTraceDataEf();
 // Register PlaywrightService as singleton
 builder.Services.AddSingleton<IPlaywrightService, PlaywrightService>();
 
-// Register ScrapingService as singleton to maintain state
+// Register ScrapingService as singleton (uses IServiceScopeFactory for scoped dependencies)
 builder.Services.AddSingleton<IScrapingService, ScrapingService>();
 
 // Add Worker service
