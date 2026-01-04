@@ -46,6 +46,8 @@ public static class DataEfExtensions
             // EF Core Database.Migrate() automaticky vytvoøí databázi pokud neexistuje
             await dbContext.Database.MigrateAsync();
 
+            await PriceTraceDbContext.SeedDataAsync(dbContext);
+
             logger.LogInformation("Database migration completed successfully.");
         }
         catch (Exception ex)

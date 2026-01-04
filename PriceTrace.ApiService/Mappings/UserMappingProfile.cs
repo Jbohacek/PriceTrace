@@ -8,7 +8,12 @@ public class UserMappingProfile : Profile
 {
     public UserMappingProfile()
     {
-        CreateMap<UserEntity, UserResponse>();
+        CreateMap<UserEntity, UserResponse>()
+            .ConstructUsing(src => new UserResponse(
+                src.Id,
+                src.Username,
+                src.CreatedDate,
+                src.UpdatedDate));
 
         CreateMap<CreateUserRequest, UserEntity>();
         CreateMap<UpdateUserRequest, UserEntity>()

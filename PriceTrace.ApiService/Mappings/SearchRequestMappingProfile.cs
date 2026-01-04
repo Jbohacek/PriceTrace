@@ -9,9 +9,18 @@ public class SearchRequestMappingProfile : Profile
     public SearchRequestMappingProfile()
     {
         CreateMap<SearchRequestsEntity, SearchRequestResponse>()
-            .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.User.Id))
-            .ForMember(dest => dest.ProductId, opt => opt.MapFrom(src => src.Product.Id))
-            .ForMember(dest => dest.FleaMarketWeb, opt => opt.MapFrom(src => src.FleaMarketWebEnum));
+            .ConstructUsing(src => new SearchRequestResponse(
+                src.Id,
+                src.User.Id,
+                src.Product.Id,
+                src.FleaMarketWebEnum,
+                src.SoftUpLimit,
+                src.SoftDownLimit,
+                src.HardUpLimit,
+                src.HardDownLimit,
+                src.IntervalInSeconds,
+                src.CreatedDate,
+                src.UpdatedDate));
 
         CreateMap<CreateSearchRequestRequest, SearchRequestsEntity>()
             .ForMember(dest => dest.FleaMarketWebEnum, opt => opt.MapFrom(src => src.FleaMarketWeb))

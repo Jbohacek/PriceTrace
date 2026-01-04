@@ -56,6 +56,11 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
+    public async Task SeedDatabase()
+    {
+        await PriceTraceDbContext.SeedDataAsync(_context);
+    }
+
     public async Task RollbackTransactionAsync(CancellationToken cancellationToken = default)
     {
         if (_transaction is not null)

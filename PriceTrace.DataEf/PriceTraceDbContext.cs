@@ -49,6 +49,29 @@ public class PriceTraceDbContext : DbContext
                   .WithOne(sr => sr.User)
                   .OnDelete(DeleteBehavior.Cascade);
         });
+
+
+    }
+
+    public static async Task SeedDataAsync(PriceTraceDbContext context)
+    {
+        if (!await context.Products.AnyAsync())
+        {
+            await context.Products.AddAsync(new ProductEntity
+            {
+                ProductName = "Steam deck",
+                ProductDescription = "Handheld gaming computer by Valve",
+                Names = ["steamdeck", "steam deck", "Valve Steam Deck"],
+                ImageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSW4fW9YJ6c1uAS9qRR6nGP1cAamQyfmqJQKA&s"
+            });
+        }
+
+        if (!await context.Users.AnyAsync())
+        {
+            await context.Users.AddAsync(new UserEntity() { Username = "Admin" });
+        }
+
+        await context.SaveChangesAsync();
     }
 
     public override int SaveChanges()

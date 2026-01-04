@@ -1,0 +1,462 @@
+@page "/searchrequests"
+@using PriceTrace.ApiService.Models
+@using PriceTrace.Common.Enums
+@inject SearchRequestApiClient SearchRequestClient
+@inject ProductApiClient ProductClient
+@inject UserApiClient UserClient
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
+
+<PageTitle>Search Requests</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Search Requests</h1>
+            <p class="text-muted">Spravujte vyhledávací požadavky pro sledování cen produktù na rùzných webových trzích.</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary btn-lg" @onclick="OpenCreateDialog">
+                <span class="bi bi-plus-circle"></span> Vytvoøit Search Request
+            </button>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Naèítání...</span>
+            </div>
+        </div>
+    }
+    else if (searchRequests.Count == 0)
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            Zatím nemáte žádné search requesty. Vytvoøte první search request pro sledování cen produktù!
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var request in searchRequests)
+            {
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="bi bi-search me-2"></i>@GetProductName(request.ProductId)
+                            </h5>
+                            <span class="badge bg-light text-dark">@request.FleaMarketWeb</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <h6 class="text-muted mb-2">
+                                    <i class="bi bi-person me-1"></i>Uživatel
+                                </h6>
+                                <p class="mb-0">@GetUserName(request.UserId)</p>
+                            </div>
+
+                            <div class="mb-3">
+                                <h6 class="text-muted mb-2">
+                                    <i class="bi bi-clock me-1"></i>Interval vyhledávání
+                                </h6>
+                                <p class="mb-0">@FormatInterval(request.IntervalInSeconds)</p>
+                            </div>
+
+                            <div class="mb-3">
+                                <h6 class="text-muted mb-2">
+                                    <i class="bi bi-shield-exclamation me-1"></i>Hard Limity (Vyhledávání)
+                                </h6>
+                                <div class="d-flex justify-content-between">
+                                    <span>
+                                        <small class="text-muted">Dolní:</small>
+                                        <strong>@(request.HardDownLimit?.ToString() ?? "N/A") Kè</strong>
+                                    </span>
+                                    <span>
+                                        <small class="text-muted">Horní:</small>
+                                        <strong>@(request.HardUpLimit?.ToString() ?? "N/A") Kè</strong>
+                                    </span>
+                                </div>
+                                <small class="text-muted d-block mt-1">
+                                    <i class="bi bi-info-circle"></i> Rozsah cen pro filtrování výsledkù vyhledávání
+                                </small>
+                            </div>
+
+                            <div class="mb-3">
+                                <h6 class="text-muted mb-2">
+                                    <i class="bi bi-star me-1"></i>Soft Limity (Optimální cena)
+                                </h6>
+                                <div class="d-flex justify-content-between">
+                                    <span>
+                                        <small class="text-muted">Dolní:</small>
+                                        <strong>@(request.SoftDownLimit?.ToString() ?? "N/A") Kè</strong>
+                                    </span>
+                                    <span>
+                                        <small class="text-muted">Horní:</small>
+                                        <strong>@(request.SoftUpLimit?.ToString() ?? "N/A") Kè</strong>
+                                    </span>
+                                </div>
+                                <small class="text-muted d-block mt-1">
+                                    <i class="bi bi-info-circle"></i> Ideální cenové rozmezí pro upozornìní
+                                </small>
+                            </div>
+
+                            <div class="text-muted small">
+                                <div>
+                                    <i class="bi bi-calendar me-1"></i>Vytvoøeno: @request.CreatedDate.ToString("g")
+                                </div>
+                                @if (request.UpdatedDate.HasValue)
+                                {
+                                    <div>
+                                        <i class="bi bi-pencil me-1"></i>Upraveno: @request.UpdatedDate.Value.ToString("g")
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                        <div class="card-footer bg-light d-flex justify-content-end gap-2">
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenEditDialog(request)">
+                                <i class="bi bi-pencil"></i> Upravit
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteSearchRequest(request.Id)">
+                                <i class="bi bi-trash"></i> Smazat
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>@errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (showDialog)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">
+                            <i class="bi bi-@(isEditMode ? "pencil" : "plus-circle") me-2"></i>
+                            @(isEditMode ? "Upravit Search Request" : "Vytvoøit Search Request")
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CloseDialog"></button>
+                    </div>
+                    <div class="modal-body">
+                        <EditForm Model="@searchRequestModel" OnValidSubmit="SaveSearchRequest">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="text-danger" />
+
+                            @if (!isEditMode)
+                            {
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">
+                                            <i class="bi bi-person me-1"></i>Uživatel *
+                                        </label>
+                                        <select class="form-select" @bind="searchRequestModel.UserId" required>
+                                            <option value="">-- Vyberte uživatele --</option>
+                                            @foreach (var user in users)
+                                            {
+                                                <option value="@user.Id">@user.Username</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">
+                                            <i class="bi bi-box me-1"></i>Product *
+                                        </label>
+                                        <select class="form-select" @bind="searchRequestModel.ProductId" required>
+                                            <option value="">-- Vyberte produkt --</option>
+                                            @foreach (var product in products)
+                                            {
+                                                <option value="@product.Id">@product.ProductName</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                            }
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-globe me-1"></i>Webové tržištì *
+                                    </label>
+                                    <select class="form-select" @bind="searchRequestModel.FleaMarketWeb" required>
+                                        <option value="">-- Vyberte tržištì --</option>
+                                        @foreach (FleaMarketWebEnum market in Enum.GetValues(typeof(FleaMarketWebEnum)))
+                                        {
+                                            @if (market != FleaMarketWebEnum.unknown)
+                                            {
+                                                <option value="@market">@market</option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-clock me-1"></i>Interval vyhledávání (sekundy) *
+                                    </label>
+                                    <input type="number" class="form-control" @bind="searchRequestModel.IntervalInSeconds" 
+                                           min="60" placeholder="300" required />
+                                    <small class="text-muted">Minimálnì 60 sekund</small>
+                                </div>
+                            </div>
+
+                            <div class="card mb-3">
+                                <div class="card-header bg-warning bg-opacity-10">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-shield-exclamation me-2"></i>Hard Limity - Rozsah vyhledávání
+                                    </h6>
+                                    <small class="text-muted">Definuje cenové rozmezí pro filtrování výsledkù pøi vyhledávání na webu</small>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Dolní hard limit (Kè)</label>
+                                            <input type="number" class="form-control" @bind="searchRequestModel.HardDownLimit" 
+                                                   min="0" placeholder="napø. 0" />
+                                            <small class="text-muted">Minimální cena pro vyhledávání</small>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Horní hard limit (Kè)</label>
+                                            <input type="number" class="form-control" @bind="searchRequestModel.HardUpLimit" 
+                                                   min="0" placeholder="napø. 50000" />
+                                            <small class="text-muted">Maximální cena pro vyhledávání</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card mb-3">
+                                <div class="card-header bg-success bg-opacity-10">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-star me-2"></i>Soft Limity - Optimální cenové rozmezí
+                                    </h6>
+                                    <small class="text-muted">Definuje ideální cenové rozmezí pro upozornìní na výhodné nabídky</small>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Dolní soft limit (Kè)</label>
+                                            <input type="number" class="form-control" @bind="searchRequestModel.SoftDownLimit" 
+                                                   min="0" placeholder="napø. 5000" />
+                                            <small class="text-muted">Minimální ideální cena</small>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Horní soft limit (Kè)</label>
+                                            <input type="number" class="form-control" @bind="searchRequestModel.SoftUpLimit" 
+                                                   min="0" placeholder="napø. 15000" />
+                                            <small class="text-muted">Maximální ideální cena</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" @onclick="CloseDialog">
+                                    <i class="bi bi-x-circle me-1"></i>Zrušit
+                                </button>
+                                <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                                    @if (isSaving)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-@(isEditMode ? "check-circle" : "plus-circle") me-1"></i>
+                                    }
+                                    @(isEditMode ? "Uložit zmìny" : "Vytvoøit")
+                                </button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<SearchRequestResponse> searchRequests = new();
+    private List<ProductResponse> products = new();
+    private List<UserResponse> users = new();
+    private bool isLoading = true;
+    private bool showDialog = false;
+    private bool isEditMode = false;
+    private bool isSaving = false;
+    private string? errorMessage;
+    private SearchRequestModel searchRequestModel = new();
+    private Guid? editingSearchRequestId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            var loadSearchRequestsTask = SearchRequestClient.GetAllSearchRequestsAsync();
+            var loadProductsTask = ProductClient.GetAllProductsAsync();
+            var loadUsersTask = UserClient.GetAllUsersAsync();
+
+            await Task.WhenAll(loadSearchRequestsTask, loadProductsTask, loadUsersTask);
+
+            searchRequests = await loadSearchRequestsTask;
+            products = await loadProductsTask;
+            users = await loadUsersTask;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Chyba pøi naèítání dat: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string GetProductName(Guid productId)
+    {
+        return products.FirstOrDefault(p => p.Id == productId)?.ProductName ?? "Neznámý produkt";
+    }
+
+    private string GetUserName(Guid userId)
+    {
+        return users.FirstOrDefault(u => u.Id == userId)?.Username ?? "Neznámý uživatel";
+    }
+
+    private string FormatInterval(long seconds)
+    {
+        if (seconds < 60)
+            return $"{seconds} sekund";
+        if (seconds < 3600)
+            return $"{seconds / 60} minut";
+        if (seconds < 86400)
+            return $"{seconds / 3600} hodin";
+        return $"{seconds / 86400} dní";
+    }
+
+    private void OpenCreateDialog()
+    {
+        searchRequestModel = new SearchRequestModel
+        {
+            IntervalInSeconds = 300
+        };
+        isEditMode = false;
+        editingSearchRequestId = null;
+        showDialog = true;
+    }
+
+    private void OpenEditDialog(SearchRequestResponse request)
+    {
+        searchRequestModel = new SearchRequestModel
+        {
+            UserId = request.UserId,
+            ProductId = request.ProductId,
+            FleaMarketWeb = request.FleaMarketWeb,
+            SoftUpLimit = request.SoftUpLimit,
+            SoftDownLimit = request.SoftDownLimit,
+            HardUpLimit = request.HardUpLimit,
+            HardDownLimit = request.HardDownLimit,
+            IntervalInSeconds = request.IntervalInSeconds
+        };
+        isEditMode = true;
+        editingSearchRequestId = request.Id;
+        showDialog = true;
+    }
+
+    private void CloseDialog()
+    {
+        showDialog = false;
+        searchRequestModel = new();
+        errorMessage = null;
+    }
+
+    private async Task SaveSearchRequest()
+    {
+        isSaving = true;
+        errorMessage = null;
+
+        try
+        {
+            if (isEditMode && editingSearchRequestId.HasValue)
+            {
+                var request = new UpdateSearchRequestRequest(
+                    searchRequestModel.FleaMarketWeb,
+                    searchRequestModel.SoftUpLimit,
+                    searchRequestModel.SoftDownLimit,
+                    searchRequestModel.HardUpLimit,
+                    searchRequestModel.HardDownLimit,
+                    searchRequestModel.IntervalInSeconds
+                );
+                await SearchRequestClient.UpdateSearchRequestAsync(editingSearchRequestId.Value, request);
+            }
+            else
+            {
+                var request = new CreateSearchRequestRequest(
+                    searchRequestModel.UserId,
+                    searchRequestModel.ProductId,
+                    searchRequestModel.FleaMarketWeb,
+                    searchRequestModel.SoftUpLimit,
+                    searchRequestModel.SoftDownLimit,
+                    searchRequestModel.HardUpLimit,
+                    searchRequestModel.HardDownLimit,
+                    searchRequestModel.IntervalInSeconds
+                );
+                await SearchRequestClient.CreateSearchRequestAsync(request);
+            }
+
+            CloseDialog();
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Chyba pøi ukládání search requestu: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task DeleteSearchRequest(Guid id)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Opravdu chcete smazat tento search request?"))
+            return;
+
+        errorMessage = null;
+        try
+        {
+            await SearchRequestClient.DeleteSearchRequestAsync(id);
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Chyba pøi mazání search requestu: {ex.Message}";
+        }
+    }
+
+    private partial class SearchRequestModel
+    {
+        public Guid UserId { get; set; }
+        public Guid ProductId { get; set; }
+        public FleaMarketWebEnum FleaMarketWeb { get; set; }
+        public int? SoftUpLimit { get; set; }
+        public int? SoftDownLimit { get; set; }
+        public int? HardUpLimit { get; set; }
+        public int? HardDownLimit { get; set; }
+        public long IntervalInSeconds { get; set; } = 300;
+    }
+}
