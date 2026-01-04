@@ -68,7 +68,7 @@ public class BazosScraper : BaseScraper
             {
                 var item = listingLocators.Nth(i);
 
-                // Extrakce dat
+                // Extract data
                 var titleElement = item.Locator(".nadpis a");
                 var title = await titleElement.InnerTextAsync();
                 var link = await titleElement.GetAttributeAsync("href");
@@ -77,14 +77,13 @@ public class BazosScraper : BaseScraper
                 var description = await item.Locator(".popis").InnerTextAsync();
                 var locationRaw = await item.Locator(".inzeratylok").InnerTextAsync();
 
-                // Ošetření odkazu (přidání domény, pokud chybí)
                 var absoluteLink = link?.StartsWith("http") == true ? link : $"https://www.bazos.cz{link}";
 
                 var price = priceRaw.Replace("Kč", string.Empty).Trim();
 
-                var suscces = double.TryParse(price, out double priceValue);
+                var success = double.TryParse(price, out double priceValue);
 
-                if (suscces == false)
+                if (success == false)
                 {
                     priceValue = -1;
                 }
@@ -93,25 +92,21 @@ public class BazosScraper : BaseScraper
                 {
                     Title = title.Trim(),
                     Url = absoluteLink,
-                    Price = Convert.ToDecimal(priceValue), // Bazoš používá pevné mezery
+                    Price = Convert.ToDecimal(priceValue), // Bazos uses fixed spaces
                     Description = description.Trim(),
                     Location = locationRaw.Replace("\n", " ").Trim(),
                     Product = product,
                 });
             }
 
-            // --- Logika stránkování ---
             var nextButton = page.Locator(".strankovani a:has-text('Další')");
 
             if (await nextButton.CountAsync() > 0)
             {
                 _logger?.LogInformation("Moving to next page...");
 
-                // Klikneme a počkáme na načtení sítě
                 await nextButton.First.ClickAsync();
 
-                // NetworkIdle je fajn, ale jistější je počkat na změnu obsahu nebo krátký delay, 
-                // protože Bazoš je starší web a NetworkIdle nemusí vždy reagovat přesně.
                 await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
             }
             else

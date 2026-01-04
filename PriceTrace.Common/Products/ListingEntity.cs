@@ -12,9 +12,9 @@ public class ListingEntity : BaseEntity
     public required string Url { get; set; }
 
     /// <summary>
-    /// -1 = Dohodou
-    /// 0 = Zdarma
-    /// 1+ = Cena v Kč
+    /// -1 = By Agreement
+    /// 0 = Free
+    /// 1+ = Price in CZK
     /// </summary>
     public required decimal Price { get; set; } = 0;
 
@@ -32,6 +32,6 @@ public class ListingEntity : BaseEntity
 
     public override string ToString()
     {
-        return $"{Title} - {Price} Kč ({Url})";
+        return $"{Title} - {Price} CZK ({Url})";
     }
 }
