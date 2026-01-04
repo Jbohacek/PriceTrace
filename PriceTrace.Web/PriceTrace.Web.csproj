@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PriceTrace.ServiceDefaults\PriceTrace.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\PriceTrace.Contracts\PriceTrace.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,274 @@
+@page "/products"
+@using PriceTrace.ApiService.Models
+@inject ProductApiClient ProductClient
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
+
+<PageTitle>Products</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h1>Products</h1>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="OpenCreateDialog">
+                <span class="bi bi-plus-circle"></span> Create Product
+            </button>
+        </div>
+    </div>
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (products.Count == 0)
+    {
+        <div class="alert alert-info">No products found. Create your first product!</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Image</th>
+                        <th>Product Name</th>
+                        <th>Description</th>
+                        <th>Names</th>
+                        <th>Created Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var product in products)
+                    {
+                        <tr>
+                            <td>
+                                @if (!string.IsNullOrEmpty(product.ImageUrl))
+                                {
+                                    <img src="@product.ImageUrl" alt="@product.ProductName" style="max-width: 50px; max-height: 50px;" />
+                                }
+                            </td>
+                            <td>@product.ProductName</td>
+                            <td>@product.ProductDescription</td>
+                            <td>
+                                @if (product.Names.Length > 0)
+                                {
+                                    <span class="badge bg-secondary me-1">@string.Join(", ", product.Names)</span>
+                                }
+                            </td>
+                            <td>@product.CreatedDate.ToString("g")</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary me-1" @onclick="() => OpenEditDialog(product)">
+                                    <span class="bi bi-pencil"></span>
+                                </button>
+                                <button class="btn btn-sm btn-danger" @onclick="() => DeleteProduct(product.Id)">
+                                    <span class="bi bi-trash"></span>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (showDialog)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">@(isEditMode ? "Edit Product" : "Create Product")</h5>
+                        <button type="button" class="btn-close" @onclick="CloseDialog"></button>
+                    </div>
+                    <div class="modal-body">
+                        <EditForm Model="@productModel" OnValidSubmit="SaveProduct">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="text-danger" />
+
+                            <div class="mb-3">
+                                <label class="form-label">Product Name</label>
+                                <InputText class="form-control" @bind-Value="productModel.ProductName" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Description</label>
+                                <InputTextArea class="form-control" @bind-Value="productModel.ProductDescription" rows="3" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Names (comma-separated)</label>
+                                <InputText class="form-control" @bind-Value="namesInput" placeholder="Name1, Name2, Name3" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Image URL (optional)</label>
+                                <InputText class="form-control" @bind-Value="productModel.ImageUrl" placeholder="https://..." />
+                            </div>
+
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" @onclick="CloseDialog">Cancel</button>
+                                <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                                    @if (isSaving)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                    }
+                                    @(isEditMode ? "Update" : "Create")
+                                </button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<ProductResponse> products = new();
+    private bool isLoading = true;
+    private bool showDialog = false;
+    private bool isEditMode = false;
+    private bool isSaving = false;
+    private string? errorMessage;
+    private ProductModel productModel = new();
+    private string namesInput = string.Empty;
+    private Guid? editingProductId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProducts();
+    }
+
+    private async Task LoadProducts()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            products = await ProductClient.GetAllProductsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load products: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OpenCreateDialog()
+    {
+        productModel = new ProductModel();
+        namesInput = string.Empty;
+        isEditMode = false;
+        editingProductId = null;
+        showDialog = true;
+    }
+
+    private void OpenEditDialog(ProductResponse product)
+    {
+        productModel = new ProductModel
+        {
+            ProductName = product.ProductName,
+            ProductDescription = product.ProductDescription,
+            ImageUrl = product.ImageUrl
+        };
+        namesInput = string.Join(", ", product.Names);
+        isEditMode = true;
+        editingProductId = product.Id;
+        showDialog = true;
+    }
+
+    private void CloseDialog()
+    {
+        showDialog = false;
+        productModel = new();
+        namesInput = string.Empty;
+        errorMessage = null;
+    }
+
+    private async Task SaveProduct()
+    {
+        isSaving = true;
+        errorMessage = null;
+
+        try
+        {
+            var names = namesInput.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(n => n.Trim())
+                .Where(n => !string.IsNullOrWhiteSpace(n))
+                .ToArray();
+
+            if (isEditMode && editingProductId.HasValue)
+            {
+                var request = new UpdateProductRequest(
+                    productModel.ProductName!,
+                    productModel.ProductDescription!,
+                    names,
+                    productModel.ImageUrl
+                );
+                await ProductClient.UpdateProductAsync(editingProductId.Value, request);
+            }
+            else
+            {
+                var request = new CreateProductRequest(
+                    productModel.ProductName!,
+                    productModel.ProductDescription!,
+                    names,
+                    productModel.ImageUrl
+                );
+                await ProductClient.CreateProductAsync(request);
+            }
+
+            CloseDialog();
+            await LoadProducts();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to save product: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task DeleteProduct(Guid id)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this product?"))
+            return;
+
+        errorMessage = null;
+        try
+        {
+            await ProductClient.DeleteProductAsync(id);
+            await LoadProducts();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to delete product: {ex.Message}";
+        }
+    }
+
+    private partial class ProductModel
+    {
+        public string? ProductName { get; set; }
+        public string? ProductDescription { get; set; }
+        public string? ImageUrl { get; set; }
+    }
+}

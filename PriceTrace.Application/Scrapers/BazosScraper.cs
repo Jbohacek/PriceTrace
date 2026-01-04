@@ -16,7 +16,6 @@ public class BazosScraper : BaseScraper
     {
         var urls = base.PopulateUrl(searchRequestsEntity);
 
-        // 1. Navigace na stránku (URL upraveno pro vyhledávání Steam Deck)
         var result = new List<ListingEntity>();
 
         foreach (var t in urls)
@@ -37,10 +36,8 @@ public class BazosScraper : BaseScraper
 
         while (hasNextPage)
         {
-            // Počkáme, až se na stránce objeví aspoň jeden inzerát
             await page.WaitForSelectorAsync(".inzeraty.inzeratyflex");
 
-            // Vybereme všechny inzeráty na aktuální stránce
             var listingLocators = page.Locator(".inzeraty.inzeratyflex");
             var count = await listingLocators.CountAsync();
 
