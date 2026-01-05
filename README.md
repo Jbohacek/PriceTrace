@@ -2,9 +2,10 @@
 
 ## How to start
 1. have docker dektop installed
-2. install playWright by running
-in root
-`powershell -ExecutionPolicy Bypass -File .\playwright.ps1`
-> this will install playwright browser for scraping
+2. install playWright by running the following commands in PowerShell:
 
-3. run `AppHost`
+`cd PriceTrace.Web\bin\Debug\net10.0`
+
+`.\playwright.ps1 install`
+
+3. run AppHost
