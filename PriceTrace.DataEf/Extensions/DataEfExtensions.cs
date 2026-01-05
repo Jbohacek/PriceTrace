@@ -22,7 +22,6 @@ public static class DataEfExtensions
 
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork.UnitOfWork>();
 
-        builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         builder.Services.AddScoped<IProductRepository, ProductRepository>();
         builder.Services.AddScoped<IListingRepository, ListingRepository>();
         builder.Services.AddScoped<IEshopPriceRepository, EshopPriceRepository>();
@@ -43,7 +42,6 @@ public static class DataEfExtensions
         {
             logger.LogInformation("Starting database migration...");
 
-            // EF Core Database.Migrate() automaticky vytvoøí databázi pokud neexistuje
             await dbContext.Database.MigrateAsync();
 
             await PriceTraceDbContext.SeedDataAsync(dbContext);

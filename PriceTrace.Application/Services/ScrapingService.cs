@@ -47,7 +47,7 @@ public class ScrapingService(
         {
             logger.LogInformation("Stopping scraping task for SearchRequestId {SearchRequestId}", searchRequestId);
             
-            task.CancellationTokenSource.Cancel();
+            await task.CancellationTokenSource.CancelAsync();
             
             if (task.RunningTask != null)
             {
@@ -131,6 +131,7 @@ public class ScrapingService(
                 _ => throw new NotSupportedException($"FleaMarketWeb type {scrapingTask.FleaMarketWeb} is not supported")
             };
 
+            //todo: pøepsat na mapper
             var searchRequest = new SearchRequestsEntity
             {
                 Id = scrapingTask.SearchRequestId,
@@ -175,6 +176,7 @@ public class ScrapingService(
                 
                 if (existingListing == null)
                 {
+                    //todo: pøepsat na mapper
                     var newListing = new ListingEntity
                     {
                         Product = product,

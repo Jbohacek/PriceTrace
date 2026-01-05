@@ -1,3 +1,5 @@
 dotnet ef migrations add InitialCreate --project PriceTrace.DataEf --startup-project PriceTrace.ApiService -- --connection "Host=localhost;Database=postgres;Username=postgres;Password=postgres"
 
 dotnet ef database update --project PriceTrace.DataEf --startup-project PriceTrace.ApiService
+
+powershell -ExecutionPolicy Bypass -File .\playwright.ps1

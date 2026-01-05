@@ -4,6 +4,7 @@ using PriceTrace.ApiService.Models;
 using PriceTrace.ApiService.Services;
 using PriceTrace.Common.Users;
 using PriceTrace.Contracts.Messages;
+using PriceTrace.Contracts.Models.SearchRequestModels;
 using PriceTrace.DataEf.UnitOfWork;
 
 namespace PriceTrace.ApiService.Controllers;
@@ -65,18 +66,7 @@ public class SearchRequestsController : ControllerBase
         await _unitOfWork.SearchRequests.AddAsync(searchRequest);
         await _unitOfWork.SaveChangesAsync();
 
-        // Send RabbitMQ command to start scraping
-        var startCommand = new StartScrapingCommand(
-            searchRequest.Id,
-            product.Id,
-            user.Id,
-            product.ProductName,
-            product.ImageUrl ?? string.Empty,
-            searchRequest.SoftUpLimit,
-            searchRequest.SoftDownLimit,
-            searchRequest.HardUpLimit,
-            searchRequest.HardDownLimit,
-            (int)searchRequest.FleaMarketWebEnum);
+        var startCommand = _mapper.Map<StartScrapingCommand>(searchRequest);
 
         await _scraperCommandService.StartScrapingAsync(startCommand);
 
@@ -110,7 +100,6 @@ public class SearchRequestsController : ControllerBase
         _unitOfWork.SearchRequests.Remove(searchRequest);
         await _unitOfWork.SaveChangesAsync();
 
-        // Send RabbitMQ command to stop scraping
         var stopCommand = new StopScrapingCommand(id);
         await _scraperCommandService.StopScrapingAsync(stopCommand);
 

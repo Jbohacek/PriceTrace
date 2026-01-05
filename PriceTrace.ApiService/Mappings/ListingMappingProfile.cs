@@ -1,6 +1,6 @@
 using AutoMapper;
-using PriceTrace.ApiService.Models;
 using PriceTrace.Common.Products;
+using PriceTrace.Contracts.Models.ListingModels;
 
 namespace PriceTrace.ApiService.Mappings;
 

@@ -2,7 +2,6 @@ using Projects;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-// Použij Parameter pro heslo - správný Aspire zpùsob
 var postgresPassword = builder.AddParameter("postgres-password", secret: true);
 
 var postgres = builder.AddPostgres("postgres", password: postgresPassword)

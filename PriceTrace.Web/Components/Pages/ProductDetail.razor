@@ -1,6 +1,8 @@
 @page "/products/{productId:guid}"
 @using PriceTrace.ApiService.Models
 @using System.Text.Json
+@using PriceTrace.Contracts.Models.ListingModels
+@using PriceTrace.Contracts.Models.ProductModels
 @inject ProductApiClient ProductClient
 @inject ListingApiClient ListingClient
 @inject NavigationManager Navigation

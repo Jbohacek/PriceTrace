@@ -25,8 +25,8 @@ public abstract class BaseScraper
             string url = BaseSearchUrl;
 
             url = url.Replace("{0}", Uri.EscapeDataString(name ?? ""));
-            url = url.Replace("{1}", Uri.EscapeDataString(searchRequestsEntity.HardUpLimit.ToString()));
-            url = url.Replace("{2}", Uri.EscapeDataString(searchRequestsEntity.HardDownLimit.ToString()));
+            url = url.Replace("{1}", Uri.EscapeDataString(searchRequestsEntity.HardUpLimit.ToString() ?? string.Empty));
+            url = url.Replace("{2}", Uri.EscapeDataString(searchRequestsEntity.HardDownLimit.ToString() ?? string.Empty));
 
             return url;
         }).ToArray();

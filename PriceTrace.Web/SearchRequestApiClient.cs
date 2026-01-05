@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using PriceTrace.ApiService.Models;
+using PriceTrace.Contracts.Models.SearchRequestModels;
 
 namespace PriceTrace.Web;
 

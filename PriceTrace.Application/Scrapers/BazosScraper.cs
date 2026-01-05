@@ -92,7 +92,7 @@ public class BazosScraper : BaseScraper
                 {
                     Title = title.Trim(),
                     Url = absoluteLink,
-                    Price = Convert.ToDecimal(priceValue), // Bazos uses fixed spaces
+                    Price = Convert.ToDecimal(priceValue),
                     Description = description.Trim(),
                     Location = locationRaw.Replace("\n", " ").Trim(),
                     Product = product,
