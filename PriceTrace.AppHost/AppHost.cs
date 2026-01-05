@@ -6,30 +6,25 @@ var postgresPassword = builder.AddParameter("postgres-password", secret: true);
 
 var postgres = builder.AddPostgres("postgres", password: postgresPassword)
     .WithHostPort(5432)
-    .WithPgAdmin();
+    .WithPgAdmin()
+    .WithLifetime(ContainerLifetime.Persistent);
 
-var databaseName = "pricetrace";
-var creationScript = $$"""
-                       -- Create the database
-                       CREATE DATABASE {{databaseName}};
-
-                       """;
-
-var database = postgres.AddDatabase("pricetrace").WithCreationScript(creationScript);
+var database = postgres.AddDatabase("pricetrace");
 
 var rabbitmq = builder.AddRabbitMQ("rabbitmq")
-    .WithManagementPlugin();
+    .WithManagementPlugin()
+    .WithLifetime(ContainerLifetime.Persistent);
 
 var scraperService = builder.AddProject<Projects.PriceTrace_ScraperService>("scraperservice")
+    .WithReference(database)
+    .WaitFor(database)
     .WithReference(rabbitmq)
-    .WaitFor(rabbitmq)
-    .WaitFor(postgres)
-    .WithReference(database);
+    .WaitFor(rabbitmq);
 
 var apiService = builder.AddProject<PriceTrace_ApiService>("apiservice")
     .WithHttpHealthCheck("/health")
-    .WaitFor(postgres)
     .WithReference(database)
+    .WaitFor(database)
     .WithReference(rabbitmq)
     .WaitFor(rabbitmq);
 
