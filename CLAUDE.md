@@ -13,6 +13,7 @@ Tento soubor je vstupní bod. Podrobnosti jsou v `docs/ai/`:
 | [docs/ai/data-and-api.md](docs/ai/data-and-api.md) | Entity, migrace, REST endpointy, DTO, Blazor stránky |
 | [docs/ai/recipes.md](docs/ai/recipes.md) | Postupy: nový scraper, nová entita, nový endpoint, nová stránka |
 | [docs/ai/issues.md](docs/ai/issues.md) | Chyby a nedostatky aplikace podle závažnosti, s místem v kódu a návrhem opravy |
+| [docs/ai/ideas.md](docs/ai/ideas.md) | Nápady na další funkce – návrhy, ne schválený plán |
 | [docs/ai/known-issues.md](docs/ai/known-issues.md) | Pasti pro vývojáře – přečti, než začneš „opravovat“ něco, co vypadá divně |
 
 ## Stack
