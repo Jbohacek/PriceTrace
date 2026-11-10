@@ -106,7 +106,7 @@ takže na konkrétní složce nezáleží – stačí kterákoli, kde skript sku
 
 ## Omezení, se kterými musíš počítat
 
-Podrobněji v [known-issues.md](known-issues.md):
+Podrobněji v [issues.md](issues.md):
 
 - Běžící úlohy žijí jen v paměti. Po restartu `scraperservice` se nic samo nerozběhne.
 - Úprava search requestu (`PUT`) běžící úlohu neovlivní.
