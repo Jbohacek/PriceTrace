@@ -50,7 +50,11 @@ public class PriceTraceDbContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
-
+        modelBuilder.Entity<ListingEntity>(entity =>
+        {
+            entity.HasIndex("ProductId", nameof(ListingEntity.Url))
+                  .IsUnique();
+        });
     }
 
     public static async Task SeedDataAsync(PriceTraceDbContext context)

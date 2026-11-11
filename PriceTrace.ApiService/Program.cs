@@ -67,10 +67,9 @@ if (app.Environment.IsDevelopment())
     // Swagger UI
     app.UseSwagger();
     app.UseSwaggerUI();
-
-    // Aplikuj migrace v development módu
-    await app.MigrateDatabaseAsync();
 }
+
+await app.MigrateDatabaseAsync();
 
 // Map controllers
 app.MapControllers();

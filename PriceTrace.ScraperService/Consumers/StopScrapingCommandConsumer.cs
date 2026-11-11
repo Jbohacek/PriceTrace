@@ -24,6 +24,7 @@ public class StopScrapingCommandConsumer(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error stopping scraping for SearchRequestId: {SearchRequestId}", message.SearchRequestId);
+            throw;
         }
     }
 }

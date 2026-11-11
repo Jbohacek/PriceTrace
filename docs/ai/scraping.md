@@ -13,15 +13,18 @@
    předá ho `IScrapingService.StartScrapingAsync`.
 5. **Smyčka** – `ScrapingService` spustí `Task.Run` s nekonečnou smyčkou
    `ExecuteScrapingLoopAsync` a uloží úlohu do `ConcurrentDictionary<Guid, ScrapingTask>`
-   (klíč = `SearchRequestId`). Každá iterace:
+   (klíč = `SearchRequestId`). Při startu `ScraperService` navíc `ScrapingStartupService` načte všechny
+   existující `SearchRequestsEntity` z DB a jejich smyčky automaticky obnoví. Každá iterace:
    - vytvoří DI scope a vezme `IUnitOfWork`,
+   - znovu načte `SearchRequestsEntity` z DB (pokud mezitím zanikla, smyčka se ukončí; jinak si zaktualizuje interval, limity a názvy),
+   - vyžádá si novou izolovanou `IPage` z `IPlaywrightService.GetPageAsync()` (a po skončení ji v `finally` zavře),
    - vybere scraper podle `FleaMarketWeb` (`switch` v `ExecuteSingleScrapingAsync`),
    - zavolá `scraper.GetSearchResult(page, searchRequest)`,
-   - pro každý výsledek hledá existující inzerát podle `Url`; nové vloží, existující přeskočí,
+   - jedním dávkovým dotazem načte existující inzeráty pro daný `(ProductId, Url)`; nové vloží (a vyhodnotí shodu se soft limity), u existujících aktualizuje změněnou cenu/popis/titulek a `RetrievedAt`,
    - uloží a počká `IntervalInSeconds` (výchozí 300 s). Po chybě čeká 60 s a zkouší znovu.
-6. **Zastavení** – `DELETE /api/searchrequests/{id}` nebo `POST /api/scraper/stop/{id}`
+6. **Zastavení a změny** – `DELETE /api/searchrequests/{id}`, smazání produktu/uživatele nebo `POST /api/scraper/stop/{id}`
    publikuje `StopScrapingCommand`; consumer zavolá `StopScrapingAsync`, který zruší
-   `CancellationTokenSource` a úlohu odebere ze slovníku.
+   `CancellationTokenSource` a úlohu odebere ze slovníku. `PUT /api/searchrequests/{id}` publikuje `StopScrapingCommand` následovaný `StartScrapingCommand`.
 
 Ruční ovládání: `POST /api/scraper/start/{searchRequestId}` a
 `POST /api/scraper/stop/{searchRequestId}` (`ScraperController`). Web pro ně tlačítka nemá,
@@ -35,7 +38,8 @@ volají se přes Swagger nebo `PriceTrace.ApiService/PriceTrace.ApiService.http`
 | `ScrapingTask` | `PriceTrace.Contracts/Tasks/` | stav jedné běžící úlohy v paměti scraperu včetně `CancellationTokenSource` a `Task` |
 | `IScraperCommandService` | `PriceTrace.ApiService/Services/` | tenký obal nad `IPublishEndpoint` |
 | `IScrapingService` / `ScrapingService` | `PriceTrace.Application/Services/` | správa smyček, deduplikace, ukládání |
-| `IPlaywrightService` / `PlaywrightService` | `PriceTrace.Application/Services/` | jeden Chromium, jeden kontext, **jedna sdílená `IPage`** |
+| `ScrapingStartupService` | `PriceTrace.ScraperService/` | `IHostedService`, který při startu obnoví scrapování všech requestů z DB |
+| `IPlaywrightService` / `PlaywrightService` | `PriceTrace.Application/Services/` | jeden Chromium a `IBrowserContext`, pro každý běh vytváří novou `IPage` |
 | `BaseScraper` | `PriceTrace.Application/` | abstrakce scraperu + `PopulateUrl` |
 | `BazosScraper` | `PriceTrace.Application/Scrapers/` | jediná implementace |
 | `IScraperModelResult`, `BazosScraperResult` | `PriceTrace.Contracts/ScrapeModelResults/` | obal nad `List<ListingEntity>` |
@@ -47,7 +51,7 @@ volají se přes Swagger nebo `PriceTrace.ApiService/PriceTrace.ApiService.http`
 
 | Zástupný znak | Hodnota |
 | --- | --- |
-| `{0}` | hledaný výraz – jeden prvek z `Product.Names` |
+| `{0}` | hledaný výraz – jeden prvek z `Product.Names` (URL-enkódovaný přes `Uri.EscapeDataString`) |
 | `{1}` | `HardUpLimit` (horní cenový limit), `null` → prázdný řetězec |
 | `{2}` | `HardDownLimit` (dolní cenový limit), `null` → prázdný řetězec |
 
@@ -58,8 +62,8 @@ ne podle `ProductName`; produkt s prázdným `Names` nenajde nic.
 
 Šablona: `https://www.bazos.cz/search.php?hledat={0}&…&cenaod={2}&cenado={1}&…`
 
-Pro každou URL: otevře stránku, zkusí zavřít cookie lištu (`#termsfeed-com---nb`), pak v
-cyklu čte inzeráty a kliká na „Další“, dokud odkaz existuje.
+Pro každou URL: otevře stránku (`WaitUntilState.DOMContentLoaded`), zkusí zavřít cookie lištu (`#termsfeed-com---nb`), pak v
+cyklu čte inzeráty a kliká na „Další“ (s prodlevou 500 ms mezi stránkami a limitem `MaxPages = 20`). Pokud stránka neobsahuje žádné inzeráty, nezasekne se na timeoutu a přejde dál.
 
 | Údaj | Selektor |
 | --- | --- |
@@ -70,18 +74,16 @@ cyklu čte inzeráty a kliká na „Další“, dokud odkaz existuje.
 | lokalita | `.inzeratylok` |
 | další stránka | `.strankovani a:has-text('Další')` |
 
-Cena: odstraní se „Kč“ a zbytek jde do `double.TryParse`. Neúspěch znamená `-1`. Význam
+Cena (`BazosScraper.ParsePrice`): `"Zdarma"` se převede na `0`, `"Dohodou"` / `"V textu"` / `"Nabídněte"` na `-1`, z číselných cen se extrahují číslice a parsují přes `decimal.TryParse` s `CultureInfo.InvariantCulture`. Význam
 hodnot `Price` podle `ListingEntity`: `-1` dohodou, `0` zdarma, `1+` cena v Kč. Výsledky ze
 všech URL se nakonec deduplikují podle `Url`. `CreatorName` a `ViewCount` scraper neplní.
 
-Selektory jsou svázané s aktuálním HTML Bazoše. Když scraper začne vracet prázdné výsledky
-nebo padat na `WaitForSelectorAsync`, první podezřelý je změna jejich markupu.
+Selektory jsou svázané s aktuálním HTML Bazoše. Když scraper začne vracet prázdné výsledky, první podezřelý je změna jejich markupu.
 
 ## Soft a hard limity
 
 - `HardUpLimit` / `HardDownLimit` jdou do URL a filtrují výsledky už na straně Bazoše.
-- `SoftUpLimit` / `SoftDownLimit` se ukládají a posílají ve zprávě, ale scraper je zatím
-  nijak nepoužívá. Zamýšlené použití (podle textu na úvodní stránce) je „rozpočet uživatele“.
+- `SoftUpLimit` / `SoftDownLimit` se vyhodnocují v `ScrapingService` při uložení nového inzerátu (shoda s rozpočtem uživatele se zaloguje jako `[SOFT LIMIT MATCH]`).
 
 ## Instalace prohlížečů
 
@@ -101,12 +103,3 @@ Skript vyžaduje PowerShell (`pwsh`), který na Linuxu nebývá předinstalovan�
 Prohlížeče se instalují do sdílené cache uživatele. Bez instalace
 `scraperservice` spadne hned při startu, protože `Program.cs` volá
 `playwrightService.InitializeAsync()` ještě před `host.Run()`.
-
-## Omezení, se kterými musíš počítat
-
-Podrobněji v [issues.md](issues.md):
-
-- Běžící úlohy žijí jen v paměti. Po restartu `scraperservice` se nic samo nerozběhne.
-- Úprava search requestu (`PUT`) běžící úlohu neovlivní.
-- Všechny úlohy sdílí jednu `IPage`; souběžné běhy si navzájem přepisují navigaci.
-- Deduplikace je podle `Url` napříč všemi produkty a existující inzerát se nikdy neaktualizuje.

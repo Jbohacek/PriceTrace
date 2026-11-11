@@ -1,5 +1,6 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using PriceTrace.ApiService.Services;
 using PriceTrace.Common.Users;
 using PriceTrace.Contracts.Messages;
@@ -26,14 +27,18 @@ public class SearchRequestsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<SearchRequestResponse>>> GetAll()
     {
-        var requests = await _unitOfWork.SearchRequests.GetAllAsync();
+        var requests = await _unitOfWork.SearchRequests.Query()
+            .AsNoTracking()
+            .ToListAsync();
         return Ok(_mapper.Map<IEnumerable<SearchRequestResponse>>(requests));
     }
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<SearchRequestResponse>> GetById(Guid id)
     {
-        var request = await _unitOfWork.SearchRequests.GetByIdAsync(id);
+        var request = await _unitOfWork.SearchRequests.Query()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.Id == id);
         if (request is null)
             return NotFound();
 
@@ -43,7 +48,10 @@ public class SearchRequestsController : ControllerBase
     [HttpGet("by-user/{userId:guid}")]
     public async Task<ActionResult<IEnumerable<SearchRequestResponse>>> GetByUserId(Guid userId)
     {
-        var requests = await _unitOfWork.SearchRequests.FindAsync(r => r.User.Id == userId);
+        var requests = await _unitOfWork.SearchRequests.Query()
+            .AsNoTracking()
+            .Where(r => r.User.Id == userId)
+            .ToListAsync();
         return Ok(_mapper.Map<IEnumerable<SearchRequestResponse>>(requests));
     }
 
@@ -84,6 +92,10 @@ public class SearchRequestsController : ControllerBase
 
         _unitOfWork.SearchRequests.Update(searchRequest);
         await _unitOfWork.SaveChangesAsync();
+
+        await _scraperCommandService.StopScrapingAsync(new StopScrapingCommand(id));
+        var startCommand = _mapper.Map<StartScrapingCommand>(searchRequest);
+        await _scraperCommandService.StartScrapingAsync(startCommand);
 
         return Ok(_mapper.Map<SearchRequestResponse>(searchRequest));
     }

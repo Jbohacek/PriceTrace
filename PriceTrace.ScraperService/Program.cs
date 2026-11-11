@@ -6,6 +6,8 @@ using MassTransit;
 
 var builder = Host.CreateApplicationBuilder(args);
 
+builder.AddServiceDefaults();
+
 // Add PriceTrace database with UnitOfWork + Repository pattern
 builder.AddPriceTraceDataEf();
 
@@ -14,6 +16,9 @@ builder.Services.AddSingleton<IPlaywrightService, PlaywrightService>();
 
 // Register ScrapingService as singleton (uses IServiceScopeFactory for scoped dependencies)
 builder.Services.AddSingleton<IScrapingService, ScrapingService>();
+
+// Resume existing search requests from DB on startup
+builder.Services.AddHostedService<ScrapingStartupService>();
 
 // Configure MassTransit with RabbitMQ
 builder.Services.AddMassTransit(x =>
@@ -38,6 +43,7 @@ builder.Services.AddMassTransit(x =>
             });
         }
 
+        cfg.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
         cfg.ConfigureEndpoints(context);
     });
 });

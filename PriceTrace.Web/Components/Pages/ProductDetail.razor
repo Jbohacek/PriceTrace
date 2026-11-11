@@ -325,13 +325,28 @@ else
 
             if (product != null)
             {
-                var filterRequest = new ListingFilterRequest(
-                    ProductId: ProductId,
-                    PageSize: 1000
-                );
-                
-                var result = await ListingClient.FilterListingsAsync(filterRequest);
-                listings = result?.Items.ToList() ?? new();
+                var allListings = new List<ListingResponse>();
+                int currentPage = 1;
+                int totalPages = 1;
+
+                do
+                {
+                    var filterRequest = new ListingFilterRequest(
+                        ProductId: ProductId,
+                        PageNumber: currentPage,
+                        PageSize: 500
+                    );
+
+                    var result = await ListingClient.FilterListingsAsync(filterRequest);
+                    if (result == null)
+                        break;
+
+                    allListings.AddRange(result.Items);
+                    totalPages = result.TotalPages;
+                    currentPage++;
+                } while (currentPage <= totalPages);
+
+                listings = allListings;
             }
         }
         catch (Exception ex)

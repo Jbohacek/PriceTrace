@@ -53,6 +53,7 @@ public class StartScrapingCommandConsumer(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error starting scraping for SearchRequestId: {SearchRequestId}", message.SearchRequestId);
+            throw;
         }
     }
 }
