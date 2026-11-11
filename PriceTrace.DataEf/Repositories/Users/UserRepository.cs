@@ -1,4 +1,5 @@
 using PriceTrace.Common.Users;
+using PriceTrace.DataEf.Repositories.Users.Interfaces;
 
 namespace PriceTrace.DataEf.Repositories.Users;
 

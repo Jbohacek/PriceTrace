@@ -26,8 +26,7 @@ navigace, které jsou `required`. V dotazech proto filtruj přes navigaci
 (`l.Product.Id == id`), ne přes neexistující `l.ProductId`.
 
 Časová razítka: `PriceTraceDbContext.SaveChanges[Async]` nastaví `CreatedDate` při vložení a
-`UpdatedDate` při změně na `DateTime.UtcNow`. Řádky `x.UpdatedDate = DateTime.Now` v
-controllerech jsou tím přepsané a nemají efekt.
+`UpdatedDate` při změně na `DateTime.UtcNow`.
 
 ## Repozitáře a Unit of Work (`PriceTrace.DataEf`)
 
@@ -38,11 +37,10 @@ controllerech jsou tím přepsané a nemají efekt.
 
 Načítání navigací:
 
-- `SearchRequestsRepository` přepisuje čtecí metody a vždy přidává `Include(User)` a
-  `Include(Product)`. Jeho `Query()` ale navigace nenačítá.
-- Ostatní repozitáře navigace nenačítají. `ListingsController` si proto bere
-  `Query().Include(l => l.Product)`. `ListingMappingProfile` čte `src.Product.Id`, takže
-  mapování inzerátu načteného bez `Include` spadne na `NullReferenceException`.
+- `SearchRequestsRepository` přepisuje `Query()` a čtecí metody a vždy přidává `Include(User)` a
+  `Include(Product)`.
+- `ListingRepository` přepisuje `Query()` a čtecí metody a vždy přidává `Include(Product)`.
+- Ostatní repozitáře navigace nenačítají.
 
 Dotazy jsou trackované (žádné `AsNoTracking`). Transakční metody `IUnitOfWork` existují, ale
 nikde se nevolají.
@@ -76,16 +74,13 @@ Všechny controllery: `[ApiController]`, `api/[controller]`, žádná autorizace
 `POST /api/listings/filter` přijímá `ListingFilterRequest` (filtry `ProductId`, `MinPrice`,
 `MaxPrice`, `Location`, `CreatorName`, `RetrievedAfter/Before`, `SearchTerm`; řazení `SortBy`
 ∈ `price | title | retrievedat | location | viewcount`, jinak `CreatedDate`; stránkování).
-`PageSize` se ořezává na 1–100. Vrací anonymní objekt
-`{ totalCount, pageNumber, pageSize, totalPages, items }`; jeho protějšek na straně webu je
-ručně udržovaný `FilteredListingsResponse` v `PriceTrace.Web/ListingApiClient.cs`. Když změníš
-jedno, změň i druhé.
+`PageSize` se ořezává na 1–100. Vrací `FilteredListingsResponse`
+(`TotalCount, PageNumber, PageSize, TotalPages, Items`) z `PriceTrace.Contracts.Models.ListingModels`.
 
 Enumy se serializují jako čísla (`"fleaMarketWeb": 1`), žádný `JsonStringEnumConverter`
 není registrovaný.
 
-Hotové ukázkové požadavky jsou v `PriceTrace.ApiService/PriceTrace.ApiService.http`
-(pozor, první požadavek na `/weatherforecast` je zbytek šablony a vrátí 404).
+Hotové ukázkové požadavky jsou v `PriceTrace.ApiService/PriceTrace.ApiService.http`.
 
 ### AutoMapper profily (`PriceTrace.ApiService/Mappings/`)
 
@@ -110,14 +105,13 @@ Blazor Web App, interaktivní stránky mají `@rendermode InteractiveServer`.
 | `ProductDetail.razor` | `/products/{productId:guid}` | detail, statistiky a grafy cen (Chart.js) |
 | `Listings.razor` | `/listings` | filtrovaný a stránkovaný seznam inzerátů |
 | `SearchRequests.razor` | `/searchrequests` | CRUD hlídacích požadavků |
-| `Counter.razor`, `Error.razor` | `/counter`, `/Error` | zbytky šablony |
+| `Error.razor` | `/Error` | chybová stránka |
 
 - Volání API jdou výhradně přes `ProductApiClient`, `ListingApiClient`,
   `SearchRequestApiClient`, `UserApiClient` v kořeni projektu `Web`. Klienti po neúspěchu
   volají `EnsureSuccessStatusCode()`; stránky výjimky chytají a zobrazují `errorMessage`.
 - Stránky drží stav i logiku v `@code` bloku, nemají code-behind ani sdílené komponenty.
 - Bootstrap 5.3.8, Bootstrap Icons a Chart.js se načítají z CDN v `Components/App.razor`.
-  Lokální kopie Bootstrapu ve `wwwroot/lib/` je zakomentovaná a nepoužívá se.
 - Grafy: `wwwroot/js/productDetailCharts.js` vystavuje `window.productDetailCharts`
   (`initializePriceDistribution`, `initializeTimeline`, `destroy`), volané přes `IJSRuntime`.
   Očekává canvasy `priceChartCanvas` a `timelineChartCanvas` a camelCase vlastnosti

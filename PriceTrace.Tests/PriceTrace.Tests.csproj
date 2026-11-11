@@ -25,6 +25,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PriceTrace.AppHost\PriceTrace.AppHost.csproj" />
+    <ProjectReference Include="..\PriceTrace.Application\PriceTrace.Application.csproj" />
+    <ProjectReference Include="..\PriceTrace.Common\PriceTrace.Common.csproj" />
+    <ProjectReference Include="..\PriceTrace.Contracts\PriceTrace.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

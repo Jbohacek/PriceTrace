@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 
 namespace PriceTrace.Tests;
-//TODO: udìlat testy
+//TODO: udÄ›lat testy
 public class WebTests
 {
     private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);

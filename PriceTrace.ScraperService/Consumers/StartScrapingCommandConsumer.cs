@@ -22,7 +22,7 @@ public class StartScrapingCommandConsumer(
 
         try
         {
-            // NaËtenÌ SearchRequest z datab·ze pro zÌsk·nÌ IntervalInSeconds a ProductNames
+            // Naƒçten√≠ SearchRequest z datab√°ze pro z√≠sk√°n√≠ IntervalInSeconds a ProductNames
             var searchRequest = await unitOfWork.SearchRequests.GetByIdAsync(message.SearchRequestId);
             
             if (searchRequest == null)
@@ -53,6 +53,7 @@ public class StartScrapingCommandConsumer(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error starting scraping for SearchRequestId: {SearchRequestId}", message.SearchRequestId);
+            throw;
         }
     }
 }

@@ -13,7 +13,6 @@ public class PlaywrightService : IPlaywrightService
     private IPlaywright? _playwright;
     private IBrowser? _browser;
     private IBrowserContext? _context;
-    private IPage? _page;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private bool _isInitialized;
 
@@ -34,7 +33,6 @@ public class PlaywrightService : IPlaywrightService
                 Headless = true
             });
             _context = await _browser.NewContextAsync();
-            _page = await _context.NewPageAsync();
             _isInitialized = true;
         }
         finally
@@ -50,16 +48,11 @@ public class PlaywrightService : IPlaywrightService
             await InitializeAsync();
         }
 
-        return _page!;
+        return await _context!.NewPageAsync();
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (_page is not null)
-        {
-            await _page.CloseAsync();
-        }
-
         if (_context is not null)
         {
             await _context.CloseAsync();

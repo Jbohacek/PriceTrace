@@ -1,11 +1,5 @@
 @ApiService_HostAddress = http://localhost:5492
 
-### Weather Forecast
-GET {{ApiService_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
-
 ### ==================== USERS ====================
 
 # Get all users

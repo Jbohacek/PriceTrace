@@ -1,6 +1,9 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using PriceTrace.ApiService.Services;
 using PriceTrace.Common.Users;
+using PriceTrace.Contracts.Messages;
 using PriceTrace.Contracts.Models.UserModels;
 using PriceTrace.DataEf.UnitOfWork;
 
@@ -8,19 +11,26 @@ namespace PriceTrace.ApiService.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class UsersController(IUnitOfWork unitOfWork, IMapper mapper) : ControllerBase
+public class UsersController(
+    IUnitOfWork unitOfWork,
+    IMapper mapper,
+    IScraperCommandService scraperCommandService) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IEnumerable<UserResponse>>> GetAll()
     {
-        var users = await unitOfWork.Users.GetAllAsync();
+        var users = await unitOfWork.Users.Query()
+            .AsNoTracking()
+            .ToListAsync();
         return Ok(mapper.Map<IEnumerable<UserResponse>>(users));
     }
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<UserResponse>> GetById(Guid id)
     {
-        var user = await unitOfWork.Users.GetByIdAsync(id);
+        var user = await unitOfWork.Users.Query()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == id);
         if (user is null)
             return NotFound();
 
@@ -47,7 +57,6 @@ public class UsersController(IUnitOfWork unitOfWork, IMapper mapper) : Controlle
             return NotFound();
 
         mapper.Map(request, user);
-        user.UpdatedDate = DateTime.Now;
 
         unitOfWork.Users.Update(user);
         await unitOfWork.SaveChangesAsync();
@@ -62,8 +71,18 @@ public class UsersController(IUnitOfWork unitOfWork, IMapper mapper) : Controlle
         if (user is null)
             return NotFound();
 
+        var searchRequestIds = await unitOfWork.SearchRequests.Query()
+            .Where(sr => sr.User.Id == id)
+            .Select(sr => sr.Id)
+            .ToListAsync();
+
         unitOfWork.Users.Remove(user);
         await unitOfWork.SaveChangesAsync();
+
+        foreach (var searchRequestId in searchRequestIds)
+        {
+            await scraperCommandService.StopScrapingAsync(new StopScrapingCommand(searchRequestId));
+        }
 
         return NoContent();
     }

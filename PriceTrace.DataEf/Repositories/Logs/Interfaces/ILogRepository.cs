@@ -1,6 +1,6 @@
 using PriceTrace.Common.LogsEntities;
 
-namespace PriceTrace.DataEf.Repositories.LogsRepositories.Interfaces;
+namespace PriceTrace.DataEf.Repositories.Logs.Interfaces;
 
 public interface ILogRepository : IRepository<LogEntity>
 {

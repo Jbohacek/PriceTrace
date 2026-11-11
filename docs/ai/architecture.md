@@ -31,7 +31,7 @@ Vše skládá `PriceTrace.AppHost/AppHost.cs`:
 | `pricetrace` | databáze na `postgres` | název connection stringu, který čeká `AddPriceTraceDataEf()` |
 | `rabbitmq` | RabbitMQ s management pluginem | perzistentní kontejner |
 | `apiservice` | `PriceTrace.ApiService` | health check `/health`, čeká na DB a RabbitMQ |
-| `scraperservice` | `PriceTrace.ScraperService` | čeká na DB a RabbitMQ, **nečeká na `apiservice`** |
+| `scraperservice` | `PriceTrace.ScraperService` | čeká na DB, RabbitMQ i `apiservice` (kvůli migracím před startem `ScrapingStartupService`) |
 | `webfrontend` | `PriceTrace.Web` | externí HTTP endpoint, čeká na API i scraper |
 
 Perzistentní kontejnery znamenají, že data i fronty přežijí restart AppHostu. Když potřebuješ
@@ -41,32 +41,24 @@ Perzistentní kontejnery znamenají, že data i fronty přežijí restart AppHos
 
 ```
 Common
-  ├── Contracts ──────────────┐
+  ├── Contracts ──────────────┬──────► ApiService (+ DataEf, ServiceDefaults)
   └── DataEf ─────────────────┤
                               ▼
-                           Clients (prázdný)
-                              ▼
                          Application
-                         ▲         ▲
-        ApiService ──────┘         └────── ScraperService
-        (+ DataEf, ServiceDefaults)        (+ Contracts, DataEf)
+                              ▲
+                       ScraperService (+ Contracts, DataEf, ServiceDefaults)
 
 Web ──► Contracts, ServiceDefaults
 AppHost ──► ApiService, ScraperService, Web
-Tests ──► AppHost
+Tests ──► AppHost, Application, Contracts
 ```
 
 Důsledky, které stojí za to znát:
 
 - `Contracts` referencuje `Common`, takže DTO mohou používat enumy (`FleaMarketWebEnum`) a
-  `IScaperModelResult` dokonce vrací `ListingEntity`. Přes `Contracts` se tak entity dostanou
+  `IScraperModelResult` dokonce vrací `ListingEntity`. Přes `Contracts` se tak entity dostanou
   i do `Web` – nepoužívej je tam.
-- `Application` nemá přímou referenci na `Contracts` ani `DataEf`; obojí získává tranzitivně
-  přes prázdný projekt `Clients`. Když `Clients` smažeš, `Application` se nepřeloží.
-- `ApiService` referencuje `Application` jen kvůli tranzitivním typům (`Contracts`); služby z
-  `Application` si neregistruje. Kvůli tomu si ale do výstupu táhne i Playwright.
-- `ScraperService` nereferencuje `ServiceDefaults`, takže nemá OpenTelemetry ani health checky.
-  Jeho konzolové logy jsou v Aspire dashboardu vidět, strukturované logy a trasy ne.
+- `ScraperService` referencuje `ServiceDefaults`, takže má zapnutou OpenTelemetry telemetrii a strukturované logování v Aspire dashboardu.
 
 ## Registrace služeb (DI)
 
@@ -75,7 +67,8 @@ Důsledky, které stojí za to znát:
 | `DataEfExtensions.AddPriceTraceDataEf()` | `PriceTraceDbContext` (přes `AddNpgsqlDbContext`), `IUnitOfWork`, všechny `I*Repository` | scoped |
 | `ApiService/Program.cs` | AutoMapper (skenuje assembly API), MassTransit bez consumerů, `IScraperCommandService` | scoped |
 | `ScraperService/Program.cs` | `IPlaywrightService`, `IScrapingService` | **singleton** |
-| `ScraperService/Program.cs` | MassTransit + `StartScrapingCommandConsumer`, `StopScrapingCommandConsumer` | scoped (per zpráva) |
+| `ScraperService/Program.cs` | `ScrapingStartupService` (`IHostedService` – obnova úloh z DB při startu) | singleton (hosted service) |
+| `ScraperService/Program.cs` | MassTransit + `StartScrapingCommandConsumer`, `StopScrapingCommandConsumer` (s `UseMessageRetry`) | scoped (per zpráva) |
 | `Web/Program.cs` | typované klienty `ProductApiClient`, `ListingApiClient`, `SearchRequestApiClient`, `UserApiClient` s adresou `https+http://apiservice` | transient |
 
 `ScrapingService` je singleton, ale potřebuje scoped `IUnitOfWork`. Proto si pro každý běh
@@ -92,16 +85,14 @@ registrace `I*Repository` v DI existují také, ale kód je nepoužívá.
   je jen záloha pro `dotnet ef` a běh mimo Aspire.
 - **RabbitMQ**: oba procesy čtou `ConnectionStrings:rabbitmq`; když chybí, padají zpět na
   `localhost` s `guest/guest`. Tento blok je v obou `Program.cs` zkopírovaný – měň oba.
-- **Migrace a seed** běží jen v `ApiService` a jen když `IsDevelopment()`
-  (`app.MigrateDatabaseAsync()`). Seed vloží produkt „Steam deck“ a uživatele „Admin“, pokud
-  jsou tabulky prázdné.
-- **Health endpointy** `/health` a `/alive` se mapují jen v Development
-  (`ServiceDefaults/Extensions.cs`).
+- **Migrace a seed** (`app.MigrateDatabaseAsync()`) běží v `ApiService` při každém startu bez ohledu na prostředí. Seed vloží produkt „Steam deck“ a uživatele „Admin“, pokud jsou tabulky prázdné.
+- **Health endpointy** `/health` a `/alive` se mapují ve všech prostředích (`ServiceDefaults/Extensions.cs`), protože na nich závisí orchestrace v `AppHost.cs`.
 - Tajemství nejsou řešena: heslo k Postgresu je `postgres` v commitnutém `appsettings.json`.
 
 ## Testy
 
-`PriceTrace.Tests/WebTests.cs` obsahuje jediný test: nastartuje celý AppHost přes
-`DistributedApplicationTestingBuilder`, počká, až bude `webfrontend` zdravý, a ověří, že `/`
-vrátí 200. Vyžaduje Docker a trvá dlouho. Jednotkové testy neexistují; pokud nějaké přidáváš,
-drž se xUnit v3 (`TestContext.Current.CancellationToken`).
+- `PriceTrace.Tests/WebTests.cs` obsahuje integrační test: nastartuje celý AppHost přes
+  `DistributedApplicationTestingBuilder`, počká, až bude `webfrontend` zdravý, a ověří, že `/`
+  vrátí 200. Vyžaduje Docker a trvá dlouho.
+- `PriceTrace.Tests/ScraperAndValidationTests.cs` obsahuje jednotkové testy pro parsování cen (`BazosScraper.ParsePrice`), generování URL (`BaseScraper.PopulateUrl`) a validaci vstupních DTO.
+- Drž se xUnit v3 (`TestContext.Current.CancellationToken`).

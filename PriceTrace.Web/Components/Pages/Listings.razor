@@ -1,5 +1,4 @@
 @page "/listings"
-@using PriceTrace.ApiService.Models
 @using PriceTrace.Contracts.Models.ListingModels
 @inject ListingApiClient ListingClient
 @inject NavigationManager Navigation
@@ -22,11 +21,11 @@
         <div class="card-body">
             <div class="row">
                 <div class="col-md-3">
-                    <label class="form-label">Min Price (KË)</label>
+                    <label class="form-label">Min Price (Kƒç)</label>
                     <input type="number" class="form-control" @bind="minPrice" />
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Max Price (KË)</label>
+                    <label class="form-label">Max Price (Kƒç)</label>
                     <input type="number" class="form-control" @bind="maxPrice" />
                 </div>
                 <div class="col-md-3">

@@ -15,18 +15,19 @@ var rabbitmq = builder.AddRabbitMQ("rabbitmq")
     .WithManagementPlugin()
     .WithLifetime(ContainerLifetime.Persistent);
 
-var scraperService = builder.AddProject<Projects.PriceTrace_ScraperService>("scraperservice")
-    .WithReference(database)
-    .WaitFor(database)
-    .WithReference(rabbitmq)
-    .WaitFor(rabbitmq);
-
 var apiService = builder.AddProject<PriceTrace_ApiService>("apiservice")
     .WithHttpHealthCheck("/health")
     .WithReference(database)
     .WaitFor(database)
     .WithReference(rabbitmq)
     .WaitFor(rabbitmq);
+
+var scraperService = builder.AddProject<Projects.PriceTrace_ScraperService>("scraperservice")
+    .WithReference(database)
+    .WaitFor(database)
+    .WithReference(rabbitmq)
+    .WaitFor(rabbitmq)
+    .WaitFor(apiService);
 
 builder.AddProject<Projects.PriceTrace_Web>("webfrontend")
     .WithExternalHttpEndpoints()

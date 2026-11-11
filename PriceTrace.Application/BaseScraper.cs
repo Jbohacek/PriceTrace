@@ -1,6 +1,6 @@
-﻿using Microsoft.Playwright;
+using Microsoft.Playwright;
 using PriceTrace.Common.Users;
-using PriceTrace.Contracts.ScapeModelResults;
+using PriceTrace.Contracts.ScrapeModelResults;
 using System.Net;
 
 namespace PriceTrace.Application;
@@ -9,7 +9,7 @@ public abstract class BaseScraper
 {
     public abstract string BaseSearchUrl { get; set; }
 
-    public abstract Task<IScaperModelResult> GetSearchResult(IPage page, SearchRequestsEntity searchRequestsEntity);
+    public abstract Task<IScraperModelResult> GetSearchResult(IPage page, SearchRequestsEntity searchRequestsEntity);
 
     /// <summary>
     /// 0 - Name

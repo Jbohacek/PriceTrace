@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PriceTrace.Application.Scrapers;
 using PriceTrace.Common.Enums;
@@ -22,13 +23,13 @@ public class ScrapingService(
         return _runningTasks.ContainsKey(searchRequestId);
     }
 
-    public async Task StartScrapingAsync(ScrapingTask scrapingTask)
+    public Task StartScrapingAsync(ScrapingTask scrapingTask)
     {
-        if (_runningTasks.ContainsKey(scrapingTask.SearchRequestId))
+        if (!_runningTasks.TryAdd(scrapingTask.SearchRequestId, scrapingTask))
         {
             logger.LogWarning("Scraping task for SearchRequestId {SearchRequestId} is already running", 
                 scrapingTask.SearchRequestId);
-            return;
+            return Task.CompletedTask;
         }
 
         logger.LogInformation("Starting scraping task for SearchRequestId {SearchRequestId} with interval {Interval}s",
@@ -38,7 +39,7 @@ public class ScrapingService(
             scrapingTask.CancellationTokenSource.Token);
 
         scrapingTask.RunningTask = task;
-        _runningTasks.TryAdd(scrapingTask.SearchRequestId, scrapingTask);
+        return Task.CompletedTask;
     }
 
     public async Task StopScrapingAsync(Guid searchRequestId)
@@ -86,12 +87,18 @@ public class ScrapingService(
                 logger.LogInformation("Executing scraping for SearchRequestId {SearchRequestId}, Product: {ProductName}",
                     scrapingTask.SearchRequestId, scrapingTask.ProductName);
 
-                await ExecuteSingleScrapingAsync(scrapingTask);
+                var shouldContinue = await ExecuteSingleScrapingAsync(scrapingTask);
+                if (!shouldContinue)
+                {
+                    _runningTasks.TryRemove(scrapingTask.SearchRequestId, out _);
+                    break;
+                }
 
+                var delaySeconds = Math.Max(60, scrapingTask.IntervalInSeconds);
                 logger.LogInformation("Scraping completed for SearchRequestId {SearchRequestId}. Waiting {Interval}s for next run",
-                    scrapingTask.SearchRequestId, scrapingTask.IntervalInSeconds);
+                    scrapingTask.SearchRequestId, delaySeconds);
 
-                await Task.Delay(TimeSpan.FromSeconds(scrapingTask.IntervalInSeconds), cancellationToken);
+                await Task.Delay(TimeSpan.FromSeconds(delaySeconds), cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -116,43 +123,37 @@ public class ScrapingService(
         }
     }
 
-    private async Task ExecuteSingleScrapingAsync(ScrapingTask scrapingTask)
+    private async Task<bool> ExecuteSingleScrapingAsync(ScrapingTask scrapingTask)
     {
         using var scope = serviceScopeFactory.CreateScope();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        
+
+        var searchRequest = await unitOfWork.SearchRequests.GetByIdAsync(scrapingTask.SearchRequestId);
+        if (searchRequest == null)
+        {
+            logger.LogInformation("SearchRequest {SearchRequestId} no longer exists in database. Stopping scraping loop.",
+                scrapingTask.SearchRequestId);
+            return false;
+        }
+
+        scrapingTask.IntervalInSeconds = searchRequest.IntervalInSeconds;
+        scrapingTask.ProductName = searchRequest.Product.ProductName;
+        scrapingTask.ProductNames = searchRequest.Product.Names;
+        scrapingTask.HardUpLimit = searchRequest.HardUpLimit;
+        scrapingTask.HardDownLimit = searchRequest.HardDownLimit;
+        scrapingTask.SoftUpLimit = searchRequest.SoftUpLimit;
+        scrapingTask.SoftDownLimit = searchRequest.SoftDownLimit;
+        scrapingTask.FleaMarketWeb = (int)searchRequest.FleaMarketWebEnum;
+
         var page = await playwrightService.GetPageAsync();
 
         try
         {
-            BaseScraper scraper = scrapingTask.FleaMarketWeb switch
+            BaseScraper scraper = searchRequest.FleaMarketWebEnum switch
             {
-                (int)FleaMarketWebEnum.bazos => new BazosScraper(),
-                _ => throw new NotSupportedException($"FleaMarketWeb type {scrapingTask.FleaMarketWeb} is not supported")
-            };
-
-            //todo: pøepsat na mapper
-            var searchRequest = new SearchRequestsEntity
-            {
-                Id = scrapingTask.SearchRequestId,
-                FleaMarketWebEnum = (FleaMarketWebEnum)scrapingTask.FleaMarketWeb,
-                HardUpLimit = scrapingTask.HardUpLimit,
-                HardDownLimit = scrapingTask.HardDownLimit,
-                SoftUpLimit = scrapingTask.SoftUpLimit,
-                SoftDownLimit = scrapingTask.SoftDownLimit,
-                IntervalInSeconds = scrapingTask.IntervalInSeconds,
-                Product = new ProductEntity
-                {
-                    Id = scrapingTask.ProductId,
-                    ProductName = scrapingTask.ProductName,
-                    Names = scrapingTask.ProductNames,
-                    ProductDescription = string.Empty
-                },
-                User = new UserEntity
-                {
-                    Id = scrapingTask.UserId,
-                    Username = string.Empty
-                }
+                FleaMarketWebEnum.bazos => new BazosScraper(
+                    scope.ServiceProvider.GetRequiredService<ILogger<BazosScraper>>()),
+                _ => throw new NotSupportedException($"FleaMarketWeb type {searchRequest.FleaMarketWebEnum} is not supported")
             };
 
             var result = await scraper.GetSearchResult(page, searchRequest);
@@ -160,23 +161,22 @@ public class ScrapingService(
             logger.LogInformation("Scraping found {Count} listings for SearchRequestId {SearchRequestId}",
                 result.Result.Count, scrapingTask.SearchRequestId);
 
-            var product = await unitOfWork.Products.GetByIdAsync(scrapingTask.ProductId);
-            if (product == null)
-            {
-                logger.LogWarning("Product with Id {ProductId} not found", scrapingTask.ProductId);
-                return;
-            }
+            var product = searchRequest.Product;
+            var scrapedUrls = result.Result.Select(l => l.Url).Distinct().ToList();
+
+            var existingListingsByUrl = scrapedUrls.Count == 0
+                ? new Dictionary<string, ListingEntity>()
+                : await unitOfWork.Listings.Query()
+                    .Where(l => l.Product.Id == product.Id && scrapedUrls.Contains(l.Url))
+                    .ToDictionaryAsync(l => l.Url);
 
             int addedCount = 0;
-            int skippedCount = 0;
+            int updatedCount = 0;
 
             foreach (var listing in result.Result)
             {
-                var existingListing = await unitOfWork.Listings.FirstOrDefaultAsync(l => l.Url == listing.Url);
-                
-                if (existingListing == null)
+                if (!existingListingsByUrl.TryGetValue(listing.Url, out var existingListing))
                 {
-                    //todo: pøepsat na mapper
                     var newListing = new ListingEntity
                     {
                         Product = product,
@@ -191,10 +191,17 @@ public class ScrapingService(
                     };
 
                     await unitOfWork.Listings.AddAsync(newListing);
+                    existingListingsByUrl[listing.Url] = newListing;
                     addedCount++;
 
+                    bool isOptimalDeal = listing.Price > 0 &&
+                        (!searchRequest.SoftDownLimit.HasValue || listing.Price >= searchRequest.SoftDownLimit.Value) &&
+                        (!searchRequest.SoftUpLimit.HasValue || listing.Price <= searchRequest.SoftUpLimit.Value) &&
+                        (searchRequest.SoftDownLimit.HasValue || searchRequest.SoftUpLimit.HasValue);
+
                     logger.LogInformation(
-                        "New Listing: {Title} | Price: {Price} Kè | Location: {Location} | URL: {Url}",
+                        "New Listing{DealTag}: {Title} | Price: {Price} KÄ | Location: {Location} | URL: {Url}",
+                        isOptimalDeal ? " [SOFT LIMIT MATCH]" : string.Empty,
                         listing.Title,
                         listing.Price,
                         listing.Location,
@@ -202,29 +209,44 @@ public class ScrapingService(
                 }
                 else
                 {
-                    skippedCount++;
-                    logger.LogDebug("Listing already exists: {Url}", listing.Url);
+                    bool changed = existingListing.Price != listing.Price ||
+                                   existingListing.Title != listing.Title ||
+                                   existingListing.Description != listing.Description ||
+                                   existingListing.Location != listing.Location;
+
+                    existingListing.Price = listing.Price;
+                    existingListing.Title = listing.Title;
+                    existingListing.Description = listing.Description;
+                    existingListing.Location = listing.Location;
+                    existingListing.RetrievedAt = DateTime.UtcNow;
+
+                    if (changed)
+                    {
+                        unitOfWork.Listings.Update(existingListing);
+                        updatedCount++;
+                    }
                 }
             }
 
-            if (addedCount > 0)
+            if (addedCount > 0 || updatedCount > 0)
             {
                 await unitOfWork.SaveChangesAsync();
-                logger.LogInformation("Saved {AddedCount} new listings to database for SearchRequestId {SearchRequestId}", 
-                    addedCount, scrapingTask.SearchRequestId);
+                logger.LogInformation(
+                    "Saved {AddedCount} new and {UpdatedCount} updated listings for SearchRequestId {SearchRequestId}", 
+                    addedCount, updatedCount, scrapingTask.SearchRequestId);
             }
 
-            if (skippedCount > 0)
-            {
-                logger.LogInformation("Skipped {SkippedCount} duplicate listings for SearchRequestId {SearchRequestId}", 
-                    skippedCount, scrapingTask.SearchRequestId);
-            }
+            return true;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error executing scraping for SearchRequestId {SearchRequestId}", 
                 scrapingTask.SearchRequestId);
             throw;
+        }
+        finally
+        {
+            await page.CloseAsync();
         }
     }
 }

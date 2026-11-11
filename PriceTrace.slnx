@@ -1,7 +1,6 @@
 <Solution>
   <Folder Name="/Core/">
     <Project Path="PriceTrace.Application/PriceTrace.Application.csproj" />
-    <Project Path="PriceTrace.Clients/PriceTrace.Clients.csproj" />
     <Project Path="PriceTrace.Common/PriceTrace.Common.csproj" />
     <Project Path="PriceTrace.Contracts/PriceTrace.Contracts.csproj" />
     <Project Path="PriceTrace.DataEf/PriceTrace.DataEf.csproj" />
@@ -10,7 +9,6 @@
     <File Path=".editorconfig" />
     <File Path="Command.txt" />
     <File Path="Directory.Packages.props" />
-    <File Path="playwright.ps1" />
     <File Path="README.md" />
   </Folder>
   <Project Path="PriceTrace.ApiService/PriceTrace.ApiService.csproj" />

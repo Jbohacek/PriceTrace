@@ -1,5 +1,5 @@
 using PriceTrace.Common.LogsEntities;
-using PriceTrace.DataEf.Repositories.LogsRepositories.Interfaces;
+using PriceTrace.DataEf.Repositories.Logs.Interfaces;
 
 namespace PriceTrace.DataEf.Repositories.Logs;
 

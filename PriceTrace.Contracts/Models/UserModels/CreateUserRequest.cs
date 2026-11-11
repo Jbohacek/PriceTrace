@@ -1,4 +1,7 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace PriceTrace.Contracts.Models.UserModels;
 
 // User DTOs
-public record CreateUserRequest(string Username);
+public record CreateUserRequest(
+    [property: Required(AllowEmptyStrings = false), MinLength(1)] string Username);

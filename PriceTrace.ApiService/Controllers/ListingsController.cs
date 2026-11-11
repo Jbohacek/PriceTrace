@@ -12,10 +12,16 @@ namespace PriceTrace.ApiService.Controllers;
 public class ListingsController(IUnitOfWork unitOfWork, IMapper mapper) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<ListingResponse>>> GetAll()
+    public async Task<ActionResult<IEnumerable<ListingResponse>>> GetAll([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 100)
     {
+        var validPageNumber = pageNumber < 1 ? 1 : pageNumber;
+        var validPageSize = pageSize < 1 ? 100 : pageSize > 1000 ? 1000 : pageSize;
+
         var listings = await unitOfWork.Listings.Query()
-            .Include(l => l.Product)
+            .AsNoTracking()
+            .OrderByDescending(l => l.CreatedDate)
+            .Skip((validPageNumber - 1) * validPageSize)
+            .Take(validPageSize)
             .ToListAsync();
         
         return Ok(mapper.Map<IEnumerable<ListingResponse>>(listings));
@@ -25,7 +31,7 @@ public class ListingsController(IUnitOfWork unitOfWork, IMapper mapper) : Contro
     public async Task<ActionResult<ListingResponse>> GetById(Guid id)
     {
         var listing = await unitOfWork.Listings.Query()
-            .Include(l => l.Product)
+            .AsNoTracking()
             .FirstOrDefaultAsync(l => l.Id == id);
 
         if (listing is null)
@@ -55,7 +61,6 @@ public class ListingsController(IUnitOfWork unitOfWork, IMapper mapper) : Contro
     public async Task<ActionResult<ListingResponse>> Update(Guid id, [FromBody] UpdateListingRequest request)
     {
         var listing = await unitOfWork.Listings.Query()
-            .Include(l => l.Product)
             .FirstOrDefaultAsync(l => l.Id == id);
 
         if (listing is null)
@@ -71,7 +76,6 @@ public class ListingsController(IUnitOfWork unitOfWork, IMapper mapper) : Contro
         }
 
         mapper.Map(request, listing);
-        listing.UpdatedDate = DateTime.Now;
 
         unitOfWork.Listings.Update(listing);
         await unitOfWork.SaveChangesAsync();
@@ -93,10 +97,10 @@ public class ListingsController(IUnitOfWork unitOfWork, IMapper mapper) : Contro
     }
 
     [HttpPost("filter")]
-    public async Task<ActionResult<object>> Filter([FromBody] ListingFilterRequest filter)
+    public async Task<ActionResult<FilteredListingsResponse>> Filter([FromBody] ListingFilterRequest filter)
     {
         var query = unitOfWork.Listings.Query()
-            .Include(l => l.Product)
+            .AsNoTracking()
             .AsQueryable();
 
         if (filter.ProductId.HasValue)
@@ -109,10 +113,16 @@ public class ListingsController(IUnitOfWork unitOfWork, IMapper mapper) : Contro
             query = query.Where(l => l.Price <= filter.MaxPrice.Value);
 
         if (!string.IsNullOrWhiteSpace(filter.Location))
-            query = query.Where(l => l.Location != null && l.Location.Contains(filter.Location));
+        {
+            var pattern = $"%{filter.Location.Trim()}%";
+            query = query.Where(l => l.Location != null && EF.Functions.ILike(l.Location, pattern));
+        }
 
         if (!string.IsNullOrWhiteSpace(filter.CreatorName))
-            query = query.Where(l => l.CreatorName != null && l.CreatorName.Contains(filter.CreatorName));
+        {
+            var pattern = $"%{filter.CreatorName.Trim()}%";
+            query = query.Where(l => l.CreatorName != null && EF.Functions.ILike(l.CreatorName, pattern));
+        }
 
         if (filter.RetrievedAfter.HasValue)
             query = query.Where(l => l.RetrievedAt >= filter.RetrievedAfter.Value);
@@ -122,9 +132,10 @@ public class ListingsController(IUnitOfWork unitOfWork, IMapper mapper) : Contro
 
         if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
         {
+            var pattern = $"%{filter.SearchTerm.Trim()}%";
             query = query.Where(l => 
-                l.Title.Contains(filter.SearchTerm) ||
-                (l.Description != null && l.Description.Contains(filter.SearchTerm)));
+                EF.Functions.ILike(l.Title, pattern) ||
+                (l.Description != null && EF.Functions.ILike(l.Description, pattern)));
         }
 
         query = filter.SortBy?.ToLower() switch
@@ -152,21 +163,19 @@ public class ListingsController(IUnitOfWork unitOfWork, IMapper mapper) : Contro
         var totalCount = await query.CountAsync();
 
         var pageNumber = filter.PageNumber < 1 ? 1 : filter.PageNumber;
-        var pageSize = filter.PageSize < 1 ? 50 : filter.PageSize > 100 ? 100 : filter.PageSize;
+        var pageSize = filter.PageSize < 1 ? 50 : filter.PageSize > 1000 ? 1000 : filter.PageSize;
         
         var listings = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
 
-        var result = new
-        {
-            TotalCount = totalCount,
-            PageNumber = pageNumber,
-            PageSize = pageSize,
-            TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
-            Items = mapper.Map<IEnumerable<ListingResponse>>(listings)
-        };
+        var result = new FilteredListingsResponse(
+            totalCount,
+            pageNumber,
+            pageSize,
+            (int)Math.Ceiling(totalCount / (double)pageSize),
+            mapper.Map<IEnumerable<ListingResponse>>(listings));
 
         return Ok(result);
     }

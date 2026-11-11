@@ -43,10 +43,3 @@ public class ListingApiClient(HttpClient httpClient)
         response.EnsureSuccessStatusCode();
     }
 }
-
-public record FilteredListingsResponse(
-    int TotalCount,
-    int PageNumber,
-    int PageSize,
-    int TotalPages,
-    IEnumerable<ListingResponse> Items);

@@ -43,7 +43,6 @@ centrální správa verzí je v něm vypnutá.
 | `PriceTrace.DataEf` | `PriceTraceDbContext`, migrace, repozitáře, `UnitOfWork` |
 | `PriceTrace.Contracts` | DTO (request/response), MassTransit zprávy, `ScrapingTask`, výsledky scraperů |
 | `PriceTrace.Common` | Entity, enumy, `BaseEntity` – nezávisí na ničem |
-| `PriceTrace.Clients` | Prázdný projekt (jen `.csproj`), slouží jen jako mezičlánek referencí |
 | `PriceTrace.Tests` | Jeden integrační smoke test přes Aspire |
 
 ## Příkazy
@@ -71,14 +70,9 @@ běží na pevném portu 5432 a kontejnery jsou perzistentní – přežijí zas
 
 ## Pravidla, která musíš dodržet
 
-1. **Kódování souborů.** Pět souborů není v UTF-8 (Windows-1250, kvůli českým komentářům):
-   `PriceTrace.ApiService/Program.cs`, `PriceTrace.Application/Services/ScrapingService.cs`,
-   `PriceTrace.ScraperService/Consumers/StartScrapingCommandConsumer.cs`,
-   `PriceTrace.Tests/WebTests.cs`, `PriceTrace.Web/Components/Pages/Listings.razor`.
-   Nástroje Edit/Write je odmítnou nebo rozbijí diakritiku. Před úpravou se zeptej uživatele,
-   jestli je smíš převést do UTF-8; jinak je upravuj shellem se zachováním kódování.
-   `grep` je bere jako binární – použij `grep -a`. Nové soubory piš v UTF-8.
-2. **Směr závislostí.** `Common` ← `Contracts`/`DataEf` ← `Clients` ← `Application` ← služby.
+1. **Kódování souborů.** Všechny zdrojové soubory v repu jsou v UTF-8. Nové soubory piš rovněž v UTF-8.
+2. **Směr závislostí.** `Common` ← `Contracts`/`DataEf` ← `Application` ← `ScraperService`;
+   `ApiService` referencuje `Contracts`, `DataEf` a `ServiceDefaults`.
    `Web` smí referencovat jen `Contracts` a `ServiceDefaults` – nikdy `DataEf` ani entity přímo
    do UI logiky. Entity patří do `Common`, DTO a zprávy do `Contracts`.
 3. **Přístup k datům jen přes `IUnitOfWork`.** Controllery ani služby si neinjektují
@@ -93,9 +87,8 @@ běží na pevném portu 5432 a kontejnery jsou perzistentní – přežijí zas
    poziční `record` typy, proto profily používají `ConstructUsing`.
 7. **Zprávy MassTransit jsou kontrakt mezi dvěma procesy.** Změna `StartScrapingCommand` nebo
    `StopScrapingCommand` vyžaduje úpravu publisheru (API) i consumeru (scraper) zároveň.
-8. **Neuklízej mimo zadání.** V repu jsou překlepy v názvech (`ScapeModelResults`,
-   `IScaperModelResult`), špatné namespace a zbytky šablony. Jsou sepsané v
-   [known-issues.md](docs/ai/known-issues.md); přejmenovávej je jen na výslovnou žádost.
+8. **Neuklízej mimo zadání.** Zbývající specifika a návrhová rozhodnutí jsou sepsané v
+   [known-issues.md](docs/ai/known-issues.md); neměň je bez výslovné žádosti.
 
 ## Konvence kódu
 

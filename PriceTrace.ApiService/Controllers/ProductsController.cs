@@ -1,6 +1,9 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using PriceTrace.ApiService.Services;
 using PriceTrace.Common.Products;
+using PriceTrace.Contracts.Messages;
 using PriceTrace.Contracts.Models.ProductModels;
 using PriceTrace.DataEf.UnitOfWork;
 
@@ -8,19 +11,26 @@ namespace PriceTrace.ApiService.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ProductsController(IUnitOfWork unitOfWork, IMapper mapper) : ControllerBase
+public class ProductsController(
+    IUnitOfWork unitOfWork,
+    IMapper mapper,
+    IScraperCommandService scraperCommandService) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ProductResponse>>> GetAll()
     {
-        var products = await unitOfWork.Products.GetAllAsync();
+        var products = await unitOfWork.Products.Query()
+            .AsNoTracking()
+            .ToListAsync();
         return Ok(mapper.Map<IEnumerable<ProductResponse>>(products));
     }
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ProductResponse>> GetById(Guid id)
     {
-        var product = await unitOfWork.Products.GetByIdAsync(id);
+        var product = await unitOfWork.Products.Query()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == id);
         if (product is null)
             return NotFound();
 
@@ -47,7 +57,6 @@ public class ProductsController(IUnitOfWork unitOfWork, IMapper mapper) : Contro
             return NotFound();
 
         mapper.Map(request, product);
-        product.UpdatedDate = DateTime.Now;
 
         unitOfWork.Products.Update(product);
         await unitOfWork.SaveChangesAsync();
@@ -62,8 +71,18 @@ public class ProductsController(IUnitOfWork unitOfWork, IMapper mapper) : Contro
         if (product is null)
             return NotFound();
 
+        var searchRequestIds = await unitOfWork.SearchRequests.Query()
+            .Where(sr => sr.Product.Id == id)
+            .Select(sr => sr.Id)
+            .ToListAsync();
+
         unitOfWork.Products.Remove(product);
         await unitOfWork.SaveChangesAsync();
+
+        foreach (var searchRequestId in searchRequestIds)
+        {
+            await scraperCommandService.StopScrapingAsync(new StopScrapingCommand(searchRequestId));
+        }
 
         return NoContent();
     }
