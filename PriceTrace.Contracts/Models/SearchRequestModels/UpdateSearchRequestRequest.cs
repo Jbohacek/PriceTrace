@@ -1,6 +1,6 @@
 using PriceTrace.Common.Enums;
 
-namespace PriceTrace.ApiService.Models;
+namespace PriceTrace.Contracts.Models.SearchRequestModels;
 
 public record UpdateSearchRequestRequest(
     FleaMarketWebEnum FleaMarketWeb,

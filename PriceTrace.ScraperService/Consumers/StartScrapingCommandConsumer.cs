@@ -22,7 +22,7 @@ public class StartScrapingCommandConsumer(
 
         try
         {
-            // Naètení SearchRequest z databáze pro získání IntervalInSeconds a ProductNames
+            // NaÄtenÃ­ SearchRequest z databÃ¡ze pro zÃ­skÃ¡nÃ­ IntervalInSeconds a ProductNames
             var searchRequest = await unitOfWork.SearchRequests.GetByIdAsync(message.SearchRequestId);
             
             if (searchRequest == null)

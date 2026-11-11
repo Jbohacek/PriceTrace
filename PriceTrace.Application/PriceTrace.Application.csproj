@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -11,7 +11,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\PriceTrace.Clients\PriceTrace.Clients.csproj" />
+    <ProjectReference Include="..\PriceTrace.Contracts\PriceTrace.Contracts.csproj" />
+    <ProjectReference Include="..\PriceTrace.DataEf\PriceTrace.DataEf.csproj" />
   </ItemGroup>
 
 </Project>

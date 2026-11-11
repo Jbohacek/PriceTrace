@@ -47,7 +47,6 @@ public class UsersController(IUnitOfWork unitOfWork, IMapper mapper) : Controlle
             return NotFound();
 
         mapper.Map(request, user);
-        user.UpdatedDate = DateTime.Now;
 
         unitOfWork.Users.Update(user);
         await unitOfWork.SaveChangesAsync();

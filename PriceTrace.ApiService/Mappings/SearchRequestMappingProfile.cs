@@ -1,5 +1,4 @@
 using AutoMapper;
-using PriceTrace.ApiService.Models;
 using PriceTrace.Common.Users;
 using PriceTrace.Contracts.Models.SearchRequestModels;
 

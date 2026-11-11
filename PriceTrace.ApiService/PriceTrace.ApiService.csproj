@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\PriceTrace.Application\PriceTrace.Application.csproj" />
+    <ProjectReference Include="..\PriceTrace.Contracts\PriceTrace.Contracts.csproj" />
     <ProjectReference Include="..\PriceTrace.DataEf\PriceTrace.DataEf.csproj" />
     <ProjectReference Include="..\PriceTrace.ServiceDefaults\PriceTrace.ServiceDefaults.csproj" />
   </ItemGroup>
@@ -25,7 +25,6 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="RabbitMQ.Client" Version="7.2.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.0" />
   </ItemGroup>
 

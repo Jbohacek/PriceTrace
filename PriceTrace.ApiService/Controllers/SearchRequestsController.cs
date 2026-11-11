@@ -1,6 +1,5 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
-using PriceTrace.ApiService.Models;
 using PriceTrace.ApiService.Services;
 using PriceTrace.Common.Users;
 using PriceTrace.Contracts.Messages;
@@ -82,7 +81,6 @@ public class SearchRequestsController : ControllerBase
             return NotFound();
 
         _mapper.Map(request, searchRequest);
-        searchRequest.UpdatedDate = DateTime.Now;
 
         _unitOfWork.SearchRequests.Update(searchRequest);
         await _unitOfWork.SaveChangesAsync();

@@ -41,15 +41,12 @@ Perzistentní kontejnery znamenají, že data i fronty přežijí restart AppHos
 
 ```
 Common
-  ├── Contracts ──────────────┐
+  ├── Contracts ──────────────┬──────► ApiService (+ DataEf, ServiceDefaults)
   └── DataEf ─────────────────┤
                               ▼
-                           Clients (prázdný)
-                              ▼
                          Application
-                         ▲         ▲
-        ApiService ──────┘         └────── ScraperService
-        (+ DataEf, ServiceDefaults)        (+ Contracts, DataEf)
+                              ▲
+                       ScraperService (+ Contracts, DataEf)
 
 Web ──► Contracts, ServiceDefaults
 AppHost ──► ApiService, ScraperService, Web
@@ -59,12 +56,8 @@ Tests ──► AppHost
 Důsledky, které stojí za to znát:
 
 - `Contracts` referencuje `Common`, takže DTO mohou používat enumy (`FleaMarketWebEnum`) a
-  `IScaperModelResult` dokonce vrací `ListingEntity`. Přes `Contracts` se tak entity dostanou
+  `IScraperModelResult` dokonce vrací `ListingEntity`. Přes `Contracts` se tak entity dostanou
   i do `Web` – nepoužívej je tam.
-- `Application` nemá přímou referenci na `Contracts` ani `DataEf`; obojí získává tranzitivně
-  přes prázdný projekt `Clients`. Když `Clients` smažeš, `Application` se nepřeloží.
-- `ApiService` referencuje `Application` jen kvůli tranzitivním typům (`Contracts`); služby z
-  `Application` si neregistruje. Kvůli tomu si ale do výstupu táhne i Playwright.
 - `ScraperService` nereferencuje `ServiceDefaults`, takže nemá OpenTelemetry ani health checky.
   Jeho konzolové logy jsou v Aspire dashboardu vidět, strukturované logy a trasy ne.
 

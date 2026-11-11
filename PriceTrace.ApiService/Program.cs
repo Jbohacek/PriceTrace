@@ -68,7 +68,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 
-    // Aplikuj migrace v development módu
+    // Aplikuj migrace v development mÃ³du
     await app.MigrateDatabaseAsync();
 }
 

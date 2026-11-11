@@ -1,8 +1,8 @@
-﻿namespace PriceTrace.Common.Enums;
+namespace PriceTrace.Common.Enums;
 
 public enum LogLevelEnum
 {
-    Informal,
+    Information,
     Warning,
     Error,
     Debug

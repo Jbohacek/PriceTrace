@@ -38,7 +38,7 @@ volají se přes Swagger nebo `PriceTrace.ApiService/PriceTrace.ApiService.http`
 | `IPlaywrightService` / `PlaywrightService` | `PriceTrace.Application/Services/` | jeden Chromium, jeden kontext, **jedna sdílená `IPage`** |
 | `BaseScraper` | `PriceTrace.Application/` | abstrakce scraperu + `PopulateUrl` |
 | `BazosScraper` | `PriceTrace.Application/Scrapers/` | jediná implementace |
-| `IScaperModelResult`, `BazosScraperResult` | `PriceTrace.Contracts/ScapeModelResults/` | obal nad `List<ListingEntity>` |
+| `IScraperModelResult`, `BazosScraperResult` | `PriceTrace.Contracts/ScrapeModelResults/` | obal nad `List<ListingEntity>` |
 | `FleaMarketWebEnum` | `PriceTrace.Common/Enums/` | `unknown = 0`, `bazos = 1` |
 
 ## BaseScraper a šablona URL
@@ -98,9 +98,7 @@ pwsh PriceTrace.ScraperService/bin/Debug/net10.0/playwright.ps1 install chromium
 
 Skript vyžaduje PowerShell (`pwsh`), který na Linuxu nebývá předinstalovaný.
 
-`README.md` uvádí cestu `PriceTrace.Web\bin\Debug\net10.0`; projekt `Web` ale Playwright
-nereferencuje, takže tam skript není. Prohlížeče se instalují do sdílené cache uživatele,
-takže na konkrétní složce nezáleží – stačí kterákoli, kde skript skutečně je. Bez instalace
+Prohlížeče se instalují do sdílené cache uživatele. Bez instalace
 `scraperservice` spadne hned při startu, protože `Program.cs` volá
 `playwrightService.InitializeAsync()` ještě před `host.Run()`.
 

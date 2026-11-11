@@ -5,7 +5,6 @@ public record StartScrapingCommand(
     Guid ProductId,
     Guid UserId,
     string ProductName,
-    string ProductUrl,
     int? SoftUpLimit,
     int? SoftDownLimit,
     int? HardUpLimit,

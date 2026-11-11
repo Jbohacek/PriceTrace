@@ -14,7 +14,6 @@ public class ScraperMappingProfile : Profile
                 src.Product.Id,
                 src.User.Id,
                 src.Product.ProductName,
-                src.Product.ImageUrl ?? string.Empty,
                 src.SoftUpLimit,
                 src.SoftDownLimit,
                 src.HardUpLimit,

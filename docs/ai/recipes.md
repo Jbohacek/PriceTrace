@@ -9,12 +9,11 @@ Každý postup končí stejně: `dotnet build PriceTrace.slnx` musí projít bez
 2. V `PriceTrace.Application/Scrapers/` vytvoř třídu dědící z `BaseScraper`:
    - `BaseSearchUrl` se zástupnými znaky `{0}` (výraz), `{1}` (horní limit), `{2}` (dolní limit),
    - `GetSearchResult(IPage page, SearchRequestsEntity request)`; URL získáš z `PopulateUrl`.
-3. Vrať implementaci `IScaperModelResult` (`PriceTrace.Contracts/ScapeModelResults/`). Můžeš
+3. Vrať implementaci `IScraperModelResult` (`PriceTrace.Contracts/ScrapeModelResults/`). Můžeš
    založit vlastní třídu podle vzoru `BazosScraperResult`.
 4. U každého `ListingEntity` vyplň aspoň `Title`, `Url` (absolutní, stabilní – slouží jako
    klíč deduplikace), `Price` a `Product`. Dodrž konvenci `-1` dohodou, `0` zdarma.
-5. Doplň větev do `switch` v `ScrapingService.ExecuteSingleScrapingAsync`
-   (soubor není v UTF-8, viz pravidlo 1 v `CLAUDE.md`).
+5. Doplň větev do `switch` v `ScrapingService.ExecuteSingleScrapingAsync`.
 6. Zpřístupni novou hodnotu v UI: výběr bazaru je v `SearchRequests.razor`.
 
 Migrace není potřeba, enum je v DB jako `integer`.

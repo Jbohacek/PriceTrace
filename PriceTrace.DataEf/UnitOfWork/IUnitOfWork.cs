@@ -1,6 +1,6 @@
-using PriceTrace.DataEf.Repositories.LogsRepositories.Interfaces;
+using PriceTrace.DataEf.Repositories.Logs.Interfaces;
 using PriceTrace.DataEf.Repositories.Products.Interfaces;
-using PriceTrace.DataEf.Repositories.Users;
+using PriceTrace.DataEf.Repositories.Users.Interfaces;
 
 namespace PriceTrace.DataEf.UnitOfWork;
 

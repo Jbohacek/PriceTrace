@@ -131,7 +131,7 @@ public class ScrapingService(
                 _ => throw new NotSupportedException($"FleaMarketWeb type {scrapingTask.FleaMarketWeb} is not supported")
             };
 
-            //todo: p¯epsat na mapper
+            //todo: p≈ôepsat na mapper
             var searchRequest = new SearchRequestsEntity
             {
                 Id = scrapingTask.SearchRequestId,
@@ -176,7 +176,7 @@ public class ScrapingService(
                 
                 if (existingListing == null)
                 {
-                    //todo: p¯epsat na mapper
+                    //todo: p≈ôepsat na mapper
                     var newListing = new ListingEntity
                     {
                         Product = product,
@@ -194,7 +194,7 @@ public class ScrapingService(
                     addedCount++;
 
                     logger.LogInformation(
-                        "New Listing: {Title} | Price: {Price} KË | Location: {Location} | URL: {Url}",
+                        "New Listing: {Title} | Price: {Price} Kƒç | Location: {Location} | URL: {Url}",
                         listing.Title,
                         listing.Price,
                         listing.Location,

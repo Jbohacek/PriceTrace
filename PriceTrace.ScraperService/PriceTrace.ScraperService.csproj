@@ -8,7 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.RabbitMQ.Client" Version="13.1.0" />
     <PackageReference Include="MassTransit.RabbitMQ" Version="8.3.4" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.1" />
     <PackageReference Include="Microsoft.Playwright" Version="1.57.0" />
@@ -18,9 +17,5 @@
     <ProjectReference Include="..\PriceTrace.Application\PriceTrace.Application.csproj" />
     <ProjectReference Include="..\PriceTrace.Contracts\PriceTrace.Contracts.csproj" />
     <ProjectReference Include="..\PriceTrace.DataEf\PriceTrace.DataEf.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Models\" />
   </ItemGroup>
 </Project>

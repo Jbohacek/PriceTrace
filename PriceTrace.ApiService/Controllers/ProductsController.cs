@@ -47,7 +47,6 @@ public class ProductsController(IUnitOfWork unitOfWork, IMapper mapper) : Contro
             return NotFound();
 
         mapper.Map(request, product);
-        product.UpdatedDate = DateTime.Now;
 
         unitOfWork.Products.Update(product);
         await unitOfWork.SaveChangesAsync();

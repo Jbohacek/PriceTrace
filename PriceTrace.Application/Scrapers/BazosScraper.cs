@@ -1,8 +1,8 @@
-﻿using Microsoft.Playwright;
+using Microsoft.Playwright;
 using Microsoft.Extensions.Logging;
 using PriceTrace.Common.Products;
 using PriceTrace.Common.Users;
-using PriceTrace.Contracts.ScapeModelResults;
+using PriceTrace.Contracts.ScrapeModelResults;
 using System.Net;
 using static System.Net.WebRequestMethods;
 
@@ -24,7 +24,7 @@ public class BazosScraper : BaseScraper
     public override string BaseSearchUrl { get; set; } =
         "https://www.bazos.cz/search.php?hledat={0}&rubriky=www&hlokalita=&humkreis=&cenaod={2}&cenado={1}&Submit=Hledat&order=&kitx=ano";
 
-    public override async Task<IScaperModelResult> GetSearchResult(IPage page, SearchRequestsEntity searchRequestsEntity)
+    public override async Task<IScraperModelResult> GetSearchResult(IPage page, SearchRequestsEntity searchRequestsEntity)
     {
         var urls = base.PopulateUrl(searchRequestsEntity);
 

@@ -6,10 +6,11 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using PriceTrace.DataEf.Repositories;
 using PriceTrace.DataEf.Repositories.Logs;
-using PriceTrace.DataEf.Repositories.LogsRepositories.Interfaces;
+using PriceTrace.DataEf.Repositories.Logs.Interfaces;
 using PriceTrace.DataEf.Repositories.Products;
 using PriceTrace.DataEf.Repositories.Products.Interfaces;
 using PriceTrace.DataEf.Repositories.Users;
+using PriceTrace.DataEf.Repositories.Users.Interfaces;
 using PriceTrace.DataEf.UnitOfWork;
 
 namespace PriceTrace.DataEf.Extensions;

@@ -71,7 +71,6 @@ public class ListingsController(IUnitOfWork unitOfWork, IMapper mapper) : Contro
         }
 
         mapper.Map(request, listing);
-        listing.UpdatedDate = DateTime.Now;
 
         unitOfWork.Listings.Update(listing);
         await unitOfWork.SaveChangesAsync();
@@ -93,7 +92,7 @@ public class ListingsController(IUnitOfWork unitOfWork, IMapper mapper) : Contro
     }
 
     [HttpPost("filter")]
-    public async Task<ActionResult<object>> Filter([FromBody] ListingFilterRequest filter)
+    public async Task<ActionResult<FilteredListingsResponse>> Filter([FromBody] ListingFilterRequest filter)
     {
         var query = unitOfWork.Listings.Query()
             .Include(l => l.Product)
@@ -159,14 +158,12 @@ public class ListingsController(IUnitOfWork unitOfWork, IMapper mapper) : Contro
             .Take(pageSize)
             .ToListAsync();
 
-        var result = new
-        {
-            TotalCount = totalCount,
-            PageNumber = pageNumber,
-            PageSize = pageSize,
-            TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
-            Items = mapper.Map<IEnumerable<ListingResponse>>(listings)
-        };
+        var result = new FilteredListingsResponse(
+            totalCount,
+            pageNumber,
+            pageSize,
+            (int)Math.Ceiling(totalCount / (double)pageSize),
+            mapper.Map<IEnumerable<ListingResponse>>(listings));
 
         return Ok(result);
     }
